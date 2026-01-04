@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoAi Demo - Test Page</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .headers-display {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .headers-display h3 {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+        }
+
+        .header-item:last-child {
+            border-bottom: none;
+        }
+
+        .header-key {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .header-value {
+            color: #666;
+            font-family: monospace;
+        }
+
+        #chat-container {
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .api-examples {
+            margin-top: 20px;
+        }
+
+        .api-example {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .api-example h4 {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .api-example code {
+            display: block;
+            background: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #667eea;
+            overflow-x: auto;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AutoAi Demo - Test Page</h1>
+            <p>Demonstrates custom Headers and REST API tool invocation functionality</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Left Panel: Configuration Panel -->
+            <div class="panel">
+                <h2>🔑 Authentication Configuration</h2>
+
+                <div class="form-group">
+                    <label>Authorization Token</label>
+                    <input type="text" id="auth-token" placeholder="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                </div>
+
+                <div class="form-group">
+                    <label>User ID (X-User-Id)</label>
+                    <input type="text" id="user-id" placeholder="user-123">
+                </div>
+
+                <div class="form-group">
+                    <label>Tenant ID (X-Tenant-Id)</label>
+                    <input type="text" id="tenant-id" placeholder="tenant-abc">
+                </div>
+
+                <div class="form-group">
+                    <label>API Key (X-API-Key)</label>
+                    <input type="text" id="api-key" placeholder="your-api-key-here">
+                </div>
+
+                <div class="form-group">
+                    <label>Session Cookie</label>
+                    <input type="text" id="session-cookie" placeholder="session-id-value">
+                </div>
+
+                <button class="btn" onclick="applyHeaders()">Apply Headers</button>
+
+                <div class="headers-display">
+                    <h3>Currently Active Headers:</h3>
+                    <div id="headers-list"></div>
+                </div>
+
+                <div class="api-examples">
+                    <h3>💡 Quick Examples - REST API Tools</h3>
+                    <div class="api-example">
+                        <h4>Example 1: Query User</h4>
+                        <code>Query user information with ID 1</code>
+                    </div>
+                    <div class="api-example">
+                        <h4>Example 2: Create Order</h4>
+                        <code>Create an order with customer ID C001, including product 1, quantity 2</code>
+                    </div>
+                    <div class="api-example">
+                        <h4>Example 3: View Order</h4>
+                        <code>Query order details for order number ORD2024010001</code>
+                    </div>
+                </div>
+
+                <div class="api-examples">
+                    <h3>🔧 Frontend Tool Examples</h3>
+                    <div class="api-example">
+                        <h4>Example 1: Store Token</h4>
+                        <code>Save token "abc123" to localStorage with key name "auth_token"</code>
+                    </div>
+                    <div class="api-example">
+                        <h4>Example 2: Get User Information</h4>
+                        <code>Get user information from localStorage</code>
+                    </div>
+                    <div class="api-example">
+                        <h4>Example 3: Read Cookie</h4>
+                        <code>Read all cookies from the page</code>
+                    </div>
+                    <div class="api-example">
+                        <h4>Example 4: Get Page Information</h4>
+                        <code>Get the current page title and URL</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Chat Interface -->
+            <div class="panel" style="padding: 0;">
+                <div id="chat-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import autoai-chat.js -->
+    <script type="module">
+        import { AutoAiChatWidget } from './auto-ai/autoai-chat.js';
+
+        // Global storage for current headers
+        window.currentHeaders = {};
+
+        // Apply Headers
+        window.applyHeaders = function() {
+            const authToken = document.getElementById('auth-token').value.trim();
+            const userId = document.getElementById('user-id').value.trim();
+            const tenantId = document.getElementById('tenant-id').value.trim();
+            const apiKey = document.getElementById('api-key').value.trim();
+            const sessionCookie = document.getElementById('session-cookie').value.trim();
+
+            const headers = {};
+
+            if (authToken) {
+                headers['Authorization'] = authToken;
+            }
+
+            if (userId) {
+                headers['X-User-Id'] = userId;
+            }
+
+            if (tenantId) {
+                headers['X-Tenant-Id'] = tenantId;
+            }
+
+            if (apiKey) {
+                headers['X-API-Key'] = apiKey;
+            }
+
+            if (sessionCookie) {
+                headers['Cookie'] = 'sessionId=' + sessionCookie;
+            }
+
+            window.currentHeaders = headers;
+            updateHeadersDisplay();
+            updateWidgetHeaders();
+
+            alert('Headers applied!\n\n' + JSON.stringify(headers, null, 2));
+        };
+
+        // Update Headers display
+        function updateHeadersDisplay() {
+            const headersList = document.getElementById('headers-list');
+            const headers = window.currentHeaders;
+
+            if (Object.keys(headers).length === 0) {
+                headersList.innerHTML = '<p style="color: #999; font-size: 13px;">No custom headers</p>';
+                return;
+            }
+
+            let html = '';
+            for (const [key, value] of Object.entries(headers)) {
+                html += `
+                    <div class="header-item">
+                        <span class="header-key">${key}</span>
+                        <span class="header-value">${value}</span>
+                    </div>
+                `;
+            }
+            headersList.innerHTML = html;
+        }
+
+        // Update Widget Headers (no longer needed to manually update, as function dynamically retrieves values)
+        function updateWidgetHeaders() {
+            // Headers will automatically retrieve the latest values through the function on each request
+            console.log('Headers will automatically update on the next request');
+        }
+
+        // Initialize Widget
+        function initWidget() {
+            window.widget = new AutoAiChatWidget({
+                container: document.getElementById('chat-container'),
+                baseUrl: '/auto-ai',
+                title: '🤖 AutoAi Chat Assistant',
+                subtitle: 'Supports REST API tool calls + Frontend tool calls',
+                // Use function form to dynamically retrieve the latest headers on each request
+                headers: () => window.currentHeaders,
+                healthCheckInterval: 30000,
+                // Frontend tools definition
+                frontendTools: [
+                    // Custom tools (optional: override built-in tools)
+                    // Built-in tools already include:
+                    // • getLocalStorage, setLocalStorage, removeLocalStorage, listLocalStorage
+                    // • getCookie, getAllCookies
+                    // • getPageInfo
+                    // • showNotification
+                    //
+                    // Only define application-specific custom tools here
+
+                    {
+                        name: 'getPageElement',
+                        description: 'Get text content or attributes of specified page elements',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                selector: {
+                                    type: 'string',
+                                    description: 'CSS selector, such as #id, .class, tagname'
+                                },
+                                attribute: {
+                                    type: 'string',
+                                    description: 'Attribute name to retrieve, leave blank to get text content'
+                                }
+                            },
+                            required: ['selector']
+                        },
+                        fn: async (args) => {
+                            try {
+                                const element = document.querySelector(args.selector);
+                                if (!element) {
+                                    return { error: 'Element not found' };
+                                }
+                                if (args.attribute) {
+                                    return element.getAttribute(args.attribute);
+                                }
+                                return element.textContent.trim();
+                            } catch (error) {
+                                return { error: 'Read failed: ' + error.message };
+                            }
+                        }
+                    },
+                    {
+                        name: 'consoleLog',
+                        description: 'Output logs to browser console for debugging',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                message: {
+                                    type: 'string',
+                                    description: 'Message to output'
+                                },
+                                level: {
+                                    type: 'string',
+                                    description: 'Log level',
+                                    enum: ['log', 'info', 'warn', 'error']
+                                }
+                            },
+                            required: ['message']
+                        },
+                        fn: async (args) => {
+                            const level = args.level || 'log';
+                            console[level]('[AI Tool]', args.message);
+                            return { success: true, message: 'Output to console' };
+                        }
+                    }
+                ]
+            });
+
+            console.log('Widget initialization complete (Headers use dynamic function, frontend tools registered)');
+        }
+
+        // Initialize after page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initWidget();
+            updateHeadersDisplay();
+
+            // Set default values for demonstration
+            document.getElementById('auth-token').value = 'Bearer demo-token-' + Date.now();
+            document.getElementById('user-id').value = 'demo-user-123';
+            document.getElementById('tenant-id').value = 'demo-tenant';
+        });
+    </script>
+</body>
+</html>

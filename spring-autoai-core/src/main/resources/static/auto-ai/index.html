@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AutoAi Web Chat - Intelligent Dialogue Assistant</title>
+    <meta name="description" content="AutoAi intelligent dialogue assistant, supporting OpenAI-compatible protocol and ReAct tool chain" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Noto Serif SC", "Source Han Serif SC", "STSong", serif;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        background-attachment: fixed;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      /* Add dynamic background effect */
+      body::before {
+        content: '';
+        position: fixed;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+        background-size: 50px 50px;
+        animation: bgMove 20s linear infinite;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      @keyframes bgMove {
+        0% {
+          transform: translate(0, 0);
+        }
+        100% {
+          transform: translate(50px, 50px);
+        }
+      }
+
+      .container {
+        position: relative;
+        width: 100%;
+        max-width: 900px;
+        height: calc(100vh - 40px);
+        z-index: 1;
+      }
+
+      /* Chat container */
+      #app {
+        width: 100%;
+        height: 100%;
+        filter: drop-shadow(0 20px 40px rgba(0,0,0,0.2));
+      }
+
+      /* Responsive design */
+      @media (max-width: 768px) {
+        .container {
+          height: calc(100vh - 40px);
+        }
+      }
+
+      @media (max-width: 480px) {
+        .container {
+          height: calc(100vh - 40px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="app"></div>
+    </div>
+    <script type="module">
+      import { AutoAiChatWidget } from "./autoai-chat.js";
+
+      // Get the base URL of the current page, automatically adapting to deployment environment
+      const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+
+      // Initialize chat component
+      const chatWidget = new AutoAiChatWidget({
+        container: document.getElementById("app"),
+        baseUrl: baseUrl,
+        // title: "AutoAi Console",
+        // subtitle: "OpenAI Compatible Protocol · ReAct Tool Chain · Streaming Output"
+      });
+
+
+
+      // Add error handling
+      window.addEventListener('error', (event) => {
+        console.error('Page error:', event.error);
+      });
+
+      // Add unhandled Promise rejection handling
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('Unhandled Promise rejection:', event.reason);
+      });
+    </script>
+  </body>
+</html>

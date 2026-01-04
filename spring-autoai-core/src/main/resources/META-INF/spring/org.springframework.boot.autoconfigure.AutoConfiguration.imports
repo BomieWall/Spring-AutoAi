@@ -1,0 +1,2 @@
+cn.autoai.core.spring.AutoAiSpringConfiguration
+cn.autoai.core.web.AutoAiWebConfiguration

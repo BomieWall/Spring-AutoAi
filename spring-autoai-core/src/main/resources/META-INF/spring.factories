@@ -1,0 +1,3 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+cn.autoai.core.spring.AutoAiSpringConfiguration,\
+cn.autoai.core.web.AutoAiWebConfiguration

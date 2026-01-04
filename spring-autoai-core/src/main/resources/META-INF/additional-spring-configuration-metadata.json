@@ -1,0 +1,82 @@
+{
+  "groups": [
+    {
+      "name": "autoai.model",
+      "type": "cn.autoai.core.llm.ModelProperties",
+      "description": "AutoAi large model configuration, supporting various adapters such as BigModel, MiniMax, and OpenAI."
+    },
+    {
+      "name": "autoai.react",
+      "type": "cn.autoai.core.react.ReActSettings",
+      "description": "AutoAi ReAct engine configuration, controlling the behavior of the Thought-Action-Observation loop."
+    },
+    {
+      "name": "autoai.web",
+      "type": "cn.autoai.core.web.AutoAiWebProperties",
+      "description": "AutoAi Web service configuration, providing OpenAI-compatible REST API interfaces."
+    }
+  ],
+  "properties": [
+    {
+      "name": "autoai.model.adapter",
+      "type": "java.lang.String",
+      "description": "Model adapter type, supports BigModel, MiniMax, OpenAI",
+      "sourceType": "cn.autoai.core.llm.ModelProperties"
+    },
+    {
+      "name": "autoai.model.model",
+      "type": "java.lang.String",
+      "description": "Model name, for example: GLM-4.7, gpt-4, etc.",
+      "sourceType": "cn.autoai.core.llm.ModelProperties"
+    },
+    {
+      "name": "autoai.model.api-key",
+      "type": "java.lang.String",
+      "description": "API key, recommended to configure via environment variable",
+      "sourceType": "cn.autoai.core.llm.ModelProperties"
+    },
+    {
+      "name": "autoai.model.base-url",
+      "type": "java.lang.String",
+      "description": "API base URL (optional), uses adapter default address if not configured",
+      "sourceType": "cn.autoai.core.llm.ModelProperties"
+    },
+    {
+      "name": "autoai.react.max-steps",
+      "type": "java.lang.Integer",
+      "description": "ReAct engine maximum execution steps",
+      "sourceType": "cn.autoai.core.react.ReActSettings"
+    },
+    {
+      "name": "autoai.react.show-tool-details",
+      "type": "java.lang.Boolean",
+      "description": "Whether to show tool execution details; true shows complete output, false only shows success/failure",
+      "sourceType": "cn.autoai.core.react.ReActSettings"
+    },
+    {
+      "name": "autoai.react.language",
+      "type": "java.lang.String",
+      "description": "System prompt language, supports zh (Chinese) or en (English)",
+      "sourceType": "cn.autoai.core.react.ReActSettings"
+    },
+    {
+      "name": "autoai.react.default-model",
+      "type": "java.lang.String",
+      "description": "Default model name to use",
+      "sourceType": "cn.autoai.core.react.ReActSettings"
+    },
+    {
+      "name": "autoai.web.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable Web service",
+      "sourceType": "cn.autoai.core.web.AutoAiWebProperties"
+    },
+    {
+      "name": "autoai.web.base-path",
+      "type": "java.lang.String",
+      "description": "Web service base path, defaults to /auto-ai",
+      "sourceType": "cn.autoai.core.web.AutoAiWebProperties"
+    }
+  ],
+  "hints": []
+}

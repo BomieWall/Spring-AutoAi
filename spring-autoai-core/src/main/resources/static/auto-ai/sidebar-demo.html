@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AutoAi Sidebar Mode Demo</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        color: white;
+      }
+
+      .demo-container {
+        text-align: center;
+        max-width: 800px;
+      }
+
+      h1 {
+        font-size: 48px;
+        margin-bottom: 20px;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      }
+
+      p {
+        font-size: 18px;
+        line-height: 1.6;
+        margin-bottom: 30px;
+        opacity: 0.95;
+      }
+
+      .info-box {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 30px;
+        margin-top: 40px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+
+      .info-box h2 {
+        font-size: 24px;
+        margin-bottom: 15px;
+      }
+
+      .info-box ul {
+        text-align: left;
+        padding-left: 20px;
+      }
+
+      .info-box li {
+        margin: 10px 0;
+        font-size: 16px;
+      }
+
+      .emoji {
+        font-size: 60px;
+        margin-bottom: 20px;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <span class="emoji">✨</span>
+      <h1>AutoAi Sidebar Mode Demo</h1>
+      <p>
+        This is a demo page showcasing AutoAi's sidebar mode.<br>
+        Click the floating button (💬) in the bottom right corner to open the chat window!
+      </p>
+
+      <div class="info-box">
+        <h2>📝 Usage Instructions</h2>
+        <ul>
+          <li><strong>Sidebar Mode</strong>: Do not specify the container parameter, automatically generate a floating button and sidebar</li>
+          <li><strong>Embedded Mode</strong>: Specify the container parameter to embed the chat component into a specified element</li>
+          <li><strong>Both modes</strong> support complete chat functionality, health checks, and streaming output</li>
+        </ul>
+      </div>
+    </div>
+
+    <script type="module">
+      import { AutoAiChatWidget } from "./autoai-chat.js";
+
+      // Get the base URL of the current page
+      const baseUrl = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '');
+
+      // Sidebar mode: Do not specify container, automatically create floating button and sidebar
+      const chatWidget = new AutoAiChatWidget({
+        baseUrl: baseUrl,
+        // title: "AutoAi Assistant",
+        // subtitle: "Sidebar Mode · At Your Service"
+      });
+
+      // If you need to destroy the component
+      // chatWidget.destroy();
+    </script>
+  </body>
+</html>
