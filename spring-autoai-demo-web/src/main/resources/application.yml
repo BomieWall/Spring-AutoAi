@@ -1,0 +1,42 @@
+# Spring-AutoAi Web Configuration
+autoai:
+  web:
+    enabled: true           # Enable web service
+    base-path: /auto-ai     # Web service base path
+  react:
+    language: en            # React language (en/zh_CN/zh_TW/ja/ko/fr/de/es/ru)
+    max-steps: 20           # Maximum execution steps (reduce to avoid long execution)
+    show-tool-details: true # Whether to show tool execution details, false shows only "Execution result: success/failure"
+    # Session expiration configuration
+    enable-session-expiration: true  # Whether to enable session expiration cleanup
+    session-expire-minutes: 60       # Session expiration time (minutes), default 60 minutes
+    session-cleanup-interval-minutes: 10  # Session cleanup interval (minutes), default 10 minutes
+  model:
+    base-url: https://open.bigmodel.cn/api/coding/paas/v4
+    adapter: BigModel       # Model adapter (BigModel/MiniMax/OpenAI)
+    model: GLM-4.7          # Model name
+    api-key: ${BIG_MODEL_API_KEY}  # API key (read from environment variable)
+
+# Spring Boot configuration
+server:
+  port: 8080
+  # Add server timeout configuration
+  servlet:
+    session:
+      timeout: 30m
+  tomcat:
+    connection-timeout: 300000  # 5-minute connection timeout
+    keep-alive-timeout: 300000  # 5-minute keep-alive timeout
+
+# Application information
+spring:
+  application:
+    name: spring-autoai-demo-web
+  mvc:
+    async:
+      '[request-timeout]': 600000  # 10-minute async request timeout, suitable for long LLM output
+
+logging:
+  level:
+    cn.autoai: DEBUG
+    root: INFO

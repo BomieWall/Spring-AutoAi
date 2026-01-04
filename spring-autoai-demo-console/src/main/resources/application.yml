@@ -1,0 +1,30 @@
+# Spring-AutoAi Console Configuration
+autoai:
+  web:
+    enabled: false          # Console application does not need Web interface
+  react:
+    language: en            # React language (en/zh_CN/zh_TW/ja/ko/fr/de/es/ru)
+    max-steps: 20           # Maximum execution steps (reduced to avoid excessive execution time)
+    show-tool-details: false # Whether to show tool execution details; when false, only shows "Execution Result: Success/Failure"
+    # Session expiration configuration
+    enable-session-expiration: true  # Whether to enable session expiration cleanup
+    session-expire-minutes: 60       # Session expiration time (minutes), default 60 minutes
+    session-cleanup-interval-minutes: 10  # Session cleanup interval (minutes), default 10 minutes
+  model:
+    adapter: BigModel       # Model adapter (BigModel/MiniMax/OpenAI)
+    model: GLM-4.7          # Model name
+    api-key: ${BIG_MODEL_API_KEY}  # API key (read from environment variable)
+    base-url: https://open.bigmodel.cn/api/coding/paas/v4       # API base URL (optional, uses adapter default address if not specified)
+
+# Spring Boot configuration
+spring:
+  application:
+    name: spring-autoai-demo-console
+  mvc:
+    async:
+      request-timeout: 600000  # 10-minute asynchronous request timeout, accommodates long-duration large model output
+
+logging:
+  level:
+    cn.autoai: DEBUG
+    root: INFO

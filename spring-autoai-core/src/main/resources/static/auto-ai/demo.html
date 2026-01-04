@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoAi Usage Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .example-section {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #123b3a;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #123b3a;
+            margin-top: 0;
+        }
+        h3 {
+            color: #555;
+            margin-top: 0;
+            font-size: 1.1em;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 6px;
+            border-left: 4px solid #123b3a;
+            overflow-x: auto;
+        }
+        code {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .tip {
+            background: #e3f2fd;
+            padding: 12px;
+            border-left: 4px solid #2196f3;
+            border-radius: 4px;
+            margin: 16px 0;
+        }
+        .warning {
+            background: #fff3e0;
+            padding: 12px;
+            border-left: 4px solid #ff9800;
+            border-radius: 4px;
+            margin: 16px 0;
+        }
+        #chat-container {
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <h1>AutoAi Usage Example</h1>
+        <div class="example-section">
+        <h2>Live Demo</h2>
+        <div id="chat-container"></div>
+    </div>
+
+    <script type="module">
+        import { AutoAiChatWidget } from './autoai-chat.js';
+
+        const widget = new AutoAiChatWidget({
+            container: document.getElementById('chat-container'),
+            baseUrl: '/auto-ai',
+            headers: {
+                'X-Demo-Mode': 'true'
+            },
+            frontendTools: [
+                {
+                    name: 'getCurrentTime',
+                    description: 'Get current time',
+                    parameters: {
+                        type: 'object',
+                        properties: {},
+                        required: []
+                    },
+                    fn: async () => new Date().toLocaleString()
+                }
+            ]
+        });
+    </script>
+    <div class="example-section">
+        <h2>Scenario Description</h2>
+        <p>AutoAi frontend components support multiple features for real-world applications:</p>
+        <ul>
+            <li><strong>Custom Headers</strong>: Pass authentication tokens, API keys, and other request headers</li>
+            <li><strong>Environment Context</strong>: Provide user info, time, and application state to AI</li>
+            <li><strong>Frontend Tools</strong>: Define JavaScript functions that AI can call</li>
+            <li><strong>Multi-language Support</strong>: Configure AI response language preference</li>
+        </ul>
+    </div>
+
+    <!-- Custom Headers -->
+    <div class="example-section">
+        <h2>Custom Headers</h2>
+        <h3>Example 1: Basic Usage - Bearer Token</h3>
+        <pre><code>const widget = new AutoAiChatWidget({
+    baseUrl: "/auto-ai",
+    headers: {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
+});</code></pre>
+
+        <h3>Example 2: Multiple Headers</h3>
+        <pre><code>const widget = new AutoAiChatWidget({
+    baseUrl: "/auto-ai",
+    headers: {
+        "Authorization": "Bearer your-token-here",
+        "X-API-Key": "your-api-key",
+        "X-Tenant-ID": "tenant-123",
+        "X-User-ID": "user-456"
+    }
+});</code></pre>
+
+        <h3>Example 3: Dynamic Header Updates</h3>
+        <pre><code>const widget = new AutoAiChatWidget({
+    baseUrl: "/auto-ai"
+});
+
+// Update headers after user login
+widget.client.setHeaders({
+    "Authorization": "Bearer new-token-here",
+    "X-Custom-Header": "custom-value"
+});</code></pre>
+
+        <h3>Example 4: Extract Headers from Existing Requests</h3>
+        <pre><code>function getAuthHeaders() {
+    const token = localStorage.getItem('authToken');
+    const session = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('session='))
+        ?.split('=')[1];
+
+    const headers = {
+        "Authorization": `Bearer ${token}`
+    };
+
+    if (session) {
+        headers["Cookie"] = `session=${session}`;
+    }
+
+    return headers;
+}
+
+const widget = new AutoAiChatWidget({
+    baseUrl: "/auto-ai",
+    headers: getAuthHeaders()
+});</code></pre>
+
+        <h3>Example 5: Dynamic Function for Headers</h3>
+        <pre><code>// Function is called before each request
+const widget = new AutoAiChatWidget({
+    baseUrl: "/auto-ai",
+    headers: () => ({
+        "Authorization": `Bearer ${localStorage.getItem('authToken')}`,
+        "X-User-Id": localStorage.getItem('userId')
+    })
+});</code></pre>
+    </div>
+
+    <!-- Environment Context -->
+    <div class="example-section">
+        <h2>Environment Context</h2>
+        <p>Pass environment context to help AI understand current situation:</p>
+
+        <h3>Example 1: Static Context Array</h3>
+        <pre><code>const widget = new AutoAiChatWidget({
+    baseUrl: "/auto-ai",
+    environmentContext: [
+        `Current time: ${new Date().toLocaleString()}`,
+        `Current user: ${AppState.username || 'Not set'}`,
+        `User role: ${userRole}`,
+        `Current environment: ${process.env.NODE_ENV}`
+    ]
+});</code></pre>
+
+        <h3>Example 2: Dynamic Context Function</h3>
+        <pre><code>const widget = new AutoAiChatWidget({
+    baseUrl: "/auto-ai",
+    environmentContext: () => {
+        const now = new Date();
+        const user = getCurrentUser();
+        return [
+            `Current time: ${now.toLocaleString()}`,
+            `Current user: ${user ? user.name : 'Not logged in'}`,
+            `User permissions: ${user ? user.permissions.join(', ') : 'None'}`,
+            `Current page: ${window.location.pathname}`
+        ];
+    }
+});</code></pre>
+
+        <h3>Example 3: Runtime Context Update</h3>
+        <pre><code>const widget = new AutoAiChatWidget({
+    baseUrl: "/auto-ai",
+    container: document.getElementById('chat-container')
+});
+
+// Update context after user role change
+function onRoleChange(newRole) {
+    widget.setEnvironmentContext([
+        `Current time: ${new Date().toLocaleString()}`,
+        `Current user: ${currentUser.name}`,
+        `User role: ${newRole}`,
+        `Role permissions: ${getPermissions(newRole).join(', ')}`
+    });
+}
+
+// Get current context
+function getCurrentContext() {
+    return widget.getEnvironmentContext();
+}</code></pre>
+    </div>
+
+    <!-- Frontend Tools -->
+    <div class="example-section">
+        <h2>Frontend Tools</h2>
+        <p>AI can call JavaScript functions defined as frontend tools:</p>
+
+        <h3>Built-in Tools</h3>
+        <table>
+            <tr><th>Tool Name</th><th>Function</th><th>Parameters</th></tr>
+            <tr><td>getLocalStorage</td><td>Get localStorage data</td><td>key (required), parseJson (optional)</td></tr>
+            <tr><td>setLocalStorage</td><td>Store localStorage data</td><td>key, value (required)</td></tr>
+            <tr><td>removeLocalStorage</td><td>Delete localStorage data</td><td>key (required)</td></tr>
+            <tr><td>listLocalStorage</td><td>List all localStorage</td><td>None</td></tr>
+            <tr><td>getCookie</td><td>Read specific Cookie</td><td>name (required)</td></tr>
+            <tr><td>getAllCookies</td><td>Read all Cookies</td><td>None</td></tr>
+            <tr><td>getPageInfo</td><td>Get page information</td><td>None</td></tr>
+            <tr><td>showNotification</td><td>Show notification</td><td>message (required), type (optional)</td></tr>
+        </table>
+
+        <h3>Example 1: Register Custom Tools</h3>
+        <pre><code>const widget = new AutoAiChatWidget({
+    baseUrl: '/auto-ai',
+    frontendTools: [
+        {
+            name: 'getUsername',
+            description: 'Get the username of the currently logged in user',
+            parameters: {
+                type: 'object',
+                properties: {
+                    format: {
+                        type: 'string',
+                        description: 'Return format: plain or json',
+                        enum: ['plain', 'json']
+                    }
+                },
+                required: []
+            },
+            fn: async (args) => {
+                const username = localStorage.getItem('username');
+                if (args.format === 'json') {
+                    return { username, timestamp: Date.now() };
+                }
+                return username;
+            }
+        },
+        {
+            name: 'navigateTo',
+            description: 'Navigate to a specific page',
+            parameters: {
+                type: 'object',
+                properties: {
+                    path: {
+                        type: 'string',
+                        description: 'Target page path, e.g., /home, /settings'
+                    },
+                    openInNewTab: {
+                        type: 'boolean',
+                        description: 'Whether to open in new tab',
+                        default: false
+                    }
+                },
+                required: ['path']
+            },
+            fn: async (args) => {
+                const url = args.path.startsWith('/') ? args.path : `/${args.path}`;
+                if (args.openInNewTab) {
+                    window.open(url, '_blank');
+                } else {
+                    window.location.href = url;
+                }
+                return { success: true, message: `Navigated to ${url}` };
+            }
+        }
+    ]
+});</code></pre>
+
+        <h3>Example 2: Override Built-in Tool</h3>
+        <pre><code>const widget = new AutoAiChatWidget({
+    baseUrl: '/auto-ai',
+    frontendTools: [
+        {
+            name: 'showNotification',
+            description: 'Display notifications using custom Toast component',
+            parameters: {
+                type: 'object',
+                properties: {
+                    message: { type: 'string' },
+                    type: {
+                        type: 'string',
+                        enum: ['info', 'success', 'warning', 'error']
+                    },
+                    duration: {
+                        type: 'number',
+                        description: 'Display duration (milliseconds)',
+                        default: 3000
+                    }
+                },
+                required: ['message']
+            },
+            fn: async (args) => {
+                myToastComponent.show({
+                    message: args.message,
+                    type: args.type || 'info',
+                    duration: args.duration || 3000
+                });
+                return { success: true, message: 'Notification displayed' };
+            }
+        }
+    ]
+});</code></pre>
+
+        <h3>Example 3: Async Tool with API Call</h3>
+        <pre><code>frontendTools: [
+    {
+        name: 'fetchUserData',
+        description: 'Fetch user data from backend API',
+        parameters: {
+            type: 'object',
+            properties: {
+                userId: {
+                    type: 'string',
+                    description: 'User ID'
+                }
+            },
+            required: ['userId']
+        },
+        fn: async (args) => {
+            try {
+                const response = await fetch(`/api/users/${args.userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                const data = await response.json();
+                return { success: true, data };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+    }
+]</code></pre>
+    </div>
+
+    <!-- Multi-language Support -->
+    <div class="example-section">
+        <h2>Multi-language Support</h2>
+        <p>AutoAi supports 9 languages. Configure on backend:</p>
+
+        <h3>Backend Configuration</h3>
+        <pre><code># application.yml
+autoai:
+  react:
+    language: zh_CN  # Supported: en, zh_CN, zh_TW, ja, ko, fr, de, es, ru</code></pre>
+
+        <h3>Supported Languages</h3>
+        <table>
+            <tr><th>Code</th><th>Language</th><th>System Prompt</th></tr>
+            <tr><td>en</td><td>English</td><td>Please prioritize responding to user questions in English.</td></tr>
+            <tr><td>zh_CN</td><td>简体中文</td><td>请优先使用简体中文回复用户的问题。</td></tr>
+            <tr><td>zh_TW</td><td>繁體中文</td><td>請優先用繁體中文回覆使用者的問題。</td></tr>
+            <tr><td>ja</td><td>日本語</td><td>ユーザーの質問には優先的に日本語で回答してください。</td></tr>
+            <tr><td>ko</td><td>한국어</td><td>사용자의 질문에 우선적으로 한국어로 답변해주세요.</td></tr>
+            <tr><td>fr</td><td>Français</td><td>Veuillez répondre prioritairement aux questions de l'utilisateur en français.</td></tr>
+            <tr><td>de</td><td>Deutsch</td><td>Bitte beantworten Sie die Fragen des Benutzers vorzugsweise auf Deutsch.</td></tr>
+            <tr><td>es</td><td>Español</td><td>Por favor, responda a las preguntas del usuario preferiblemente en español.</td></tr>
+            <tr><td>ru</td><td>Русский</td><td>Пожалуйста, отвечайте на вопросы пользователя преимущественно на русском языке.</td></tr>
+        </table>
+
+    </div>
+
+    <!-- Health Check -->
+    <div class="example-section">
+        <h2>Health Check</h2>
+        <p>Periodically check backend service availability:</p>
+
+        <h3>Configuration</h3>
+        <pre><code>const widget = new AutoAiChatWidget({
+    baseUrl: '/auto-ai',
+    healthCheckInterval: 30000  // Health check interval (ms), default 30 seconds
+});</code></pre>
+
+        <h3>Health Check API</h3>
+        <pre><code># GET /auto-ai/v1/health
+# Response example:
+{
+    "status": "UP",
+    "timestamp": "2024-01-01T00:00:00Z",
+    "model": "GLM-4.7",
+    "adapter": "BigModel"
+}</code></pre>
+
+        <table>
+            <tr><th>Status</th><th>Description</th></tr>
+            <tr><td>UP</td><td>Service is running normally</td></tr>
+            <tr><td>DOWN</td><td>Service is unavailable</td></tr>
+        </table>
+    </div>
+
+    <!-- Complete Example -->
+    <div class="example-section">
+        <h2>Complete Example - Embedded Mode</h2>
+        <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;script type="module"&gt;
+        import { AutoAiChatWidget } from './autoai-chat.js';
+
+        const widget = new AutoAiChatWidget({
+            container: document.getElementById('chat-container'),
+            baseUrl: '/auto-ai',
+            title: 'AI Assistant',
+            subtitle: 'At Your Service',
+
+            // Custom headers
+            headers: () => ({
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'X-Tenant-ID': localStorage.getItem('tenantId'),
+                'X-User-ID': localStorage.getItem('userId')
+            }),
+
+            // Environment context
+            environmentContext: () => {
+                const user = getCurrentUser();
+                const now = new Date();
+                return [
+                    `Current time: ${now.toLocaleString()}`,
+                    `Current user: ${user ? user.name : 'Not logged in'}`,
+                    `User role: ${user ? user.role : 'None'}`,
+                    `Current environment: ${ENV_NAME}`
+                ];
+            },
+
+            // Frontend tools
+            frontendTools: [
+                {
+                    name: 'getUsername',
+                    description: 'Get current username',
+                    parameters: {
+                        type: 'object',
+                        properties: {},
+                        required: []
+                    },
+                    fn: async () => localStorage.getItem('username')
+                }
+            ]
+        });
+    &lt;/script&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div id="chat-container"&gt;&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<a href="index.html" target="_blank" style="display: inline-block; margin-top: 10px;color: #007bff;">View Embedded Demo</a>
+    </div>
+
+    <div class="example-section">
+        <h2>Complete Example - Sidebar Mode (Floating Button)</h2>
+        <pre><code>// Sidebar mode - automatically create floating button and sidebar
+const widget = new AutoAiChatWidget({
+    baseUrl: '/auto-ai',
+    headers: {
+        'Authorization': 'Bearer your-token',
+        'X-Custom-Header': 'value'
+    },
+    frontendTools: [
+        // Add your custom tools here
+    ]
+});</code></pre>
+<a href="sidebar-demo.html" target="_blank" style="display: inline-block; margin-top: 10px;color: #007bff;">View Sidebar Demo</a>
+    </div>
+
+    <div class="tip">
+        <strong>Tip:</strong>
+        <ul>
+            <li>Headers will be automatically applied to all requests</li>
+            <li>Default <code>Content-Type: application/json</code> will be preserved</li>
+            <li>If a custom header conflicts with a default header, the custom one overrides</li>
+            <li>Use <code>setHeaders()</code> to update headers at any time</li>
+            <li>Environment context is sent at the start of each conversation</li>
+            <li>Frontend tools can be async and call external APIs</li>
+        </ul>
+    </div>
+
+    <div class="warning">
+        <strong>Important Notes:</strong>
+        <ul>
+            <li><strong>Security</strong>: Do not hardcode sensitive information like API keys in frontend</li>
+            <li><strong>Token Refresh</strong>: Call <code>setHeaders()</code> after updating token</li>
+            <li><strong>CORS</strong>: Ensure backend has correct CORS policy for custom headers</li>
+            <li><strong>Error Handling</strong>: Use try-catch in tool functions and return formatted errors</li>
+            <li><strong>Naming</strong>: Use camelCase for tool names and parameter names</li>
+        </ul>
+    </div>
+
+
+</body>
+</html>
