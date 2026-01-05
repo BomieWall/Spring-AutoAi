@@ -13,9 +13,9 @@ AutoAi Core is now a monolithic module integrating all features, including:
 
 ```xml
 <dependency>
-    <groupId>cn.autoai</groupId>
-    <artifactId>autoai-core</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <groupId>io.github.bomiewall</groupId>
+    <artifactId>spring-autoai-core</artifactId>
+    <version>0.1.9</version>
 </dependency>
 ```
 
@@ -258,21 +258,21 @@ If you previously used separated modules, now you only need to:
    ```xml
    <!-- Remove these dependencies -->
    <dependency>
-       <groupId>cn.autoai</groupId>
-       <artifactId>autoai-spring</artifactId>
+       <groupId>io.github.bomiewall</groupId>
+       <artifactId>spring-autoai-spring</artifactId>
    </dependency>
    <dependency>
-       <groupId>cn.autoai</groupId>
-       <artifactId>autoai-spring-web</artifactId>
+       <groupId>io.github.bomiewall</groupId>
+       <artifactId>spring-autoai-spring-web</artifactId>
    </dependency>
    ```
 
 2. Add new dependency:
    ```xml
    <dependency>
-       <groupId>cn.autoai</groupId>
-       <artifactId>autoai-core</artifactId>
-       <version>0.1.0-SNAPSHOT</version>
+       <groupId>io.github.bomiewall</groupId>
+       <artifactId>spring-autoai-core</artifactId>
+       <version>0.1.9</version>
    </dependency>
    ```
 

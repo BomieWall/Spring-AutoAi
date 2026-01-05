@@ -755,7 +755,7 @@ public class ReActEngine {
 
             // Send tool execution success notification (for frontend timer display)
             if (typedCallback != null) {
-                typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_success"));
+                typedCallback.onTypedChunk(ContentType.ACTION_END, "success");
             }
 
             return "✅ " + i18nService.get("react.tool_call_success") + ": " + result;
@@ -773,7 +773,7 @@ public class ReActEngine {
 
                 // Send tool execution success notification (for frontend timer display)
                 if (typedCallback != null) {
-                    typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_success"));
+                    typedCallback.onTypedChunk(ContentType.ACTION_END, "success");
                 }
 
                 // Always return complete information for AI use
@@ -781,7 +781,7 @@ public class ReActEngine {
             } catch (InterruptedException e) {
                 // Send tool execution failure notification (for frontend timer display)
                 if (typedCallback != null) {
-                    typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_error"));
+                    typedCallback.onTypedChunk(ContentType.ACTION_END, "error");
                 }
                 Thread.currentThread().interrupt();
                 return "❌ " + i18nService.get("react.tool_call_failed") + ": Call interrupted";
@@ -794,7 +794,7 @@ public class ReActEngine {
             if (definition.isEmpty()) {
                 // Send tool execution failure notification (for frontend timer display)
                 if (typedCallback != null) {
-                    typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_error"));
+                    typedCallback.onTypedChunk(ContentType.ACTION_END, "error");
                 }
                 return "❌ " + i18nService.get("react.tool_call_failed") + ": Unknown tool: " + name;
             }
@@ -804,7 +804,7 @@ public class ReActEngine {
 
                 // Send tool execution success notification (for frontend timer display)
                 if (typedCallback != null) {
-                    typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_success"));
+                    typedCallback.onTypedChunk(ContentType.ACTION_END, "success");
                 }
 
                 // Always return complete information for AI use
@@ -812,7 +812,7 @@ public class ReActEngine {
             } catch (Exception ex) {
                 // Send tool execution failure notification (for frontend timer display)
                 if (typedCallback != null) {
-                    typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_error"));
+                    typedCallback.onTypedChunk(ContentType.ACTION_END, "error");
                 }
                 return "❌ " + i18nService.get("react.tool_call_failed") + ": Tool execution failed: " + ex.getMessage();
             }
@@ -852,7 +852,7 @@ public class ReActEngine {
         if (TOOL_DETAIL_NAME.equals(toolName)) {
             String result = fetchToolDetailFromArgs(actionCall.getArgs());
             if (typedCallback != null) {
-                typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_success"));
+                typedCallback.onTypedChunk(ContentType.ACTION_END, "success");
             }
             return "✅ " + i18nService.get("react.tool_call_success") + ": " + result;
         }
@@ -903,7 +903,7 @@ public class ReActEngine {
 
             // 6. Send tool execution completion notification (for frontend timer display)
             if (typedCallback != null) {
-                typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_success"));
+                typedCallback.onTypedChunk(ContentType.ACTION_END, "success");
             }
 
             // 5. Return result
@@ -912,12 +912,12 @@ public class ReActEngine {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             if (typedCallback != null) {
-                typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_success"));
+                typedCallback.onTypedChunk(ContentType.ACTION_END, "success");
             }
             return "❌ " + i18nService.get("react.tool_call_failed") + ": Call interrupted";
         } catch (Exception e) {
             if (typedCallback != null) {
-                typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_error"));
+                typedCallback.onTypedChunk(ContentType.ACTION_END, "error");
             }
             return "❌ " + i18nService.get("react.tool_call_failed") + ": " + e.getMessage();
         }
@@ -1019,7 +1019,7 @@ public class ReActEngine {
         Optional<ToolDefinition> definition = toolRegistry.getDefinition(actionCall.getToolName());
         if (definition.isEmpty()) {
             if (typedCallback != null) {
-                typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_error"));
+                typedCallback.onTypedChunk(ContentType.ACTION_END, "error");
             }
             return "❌ " + i18nService.get("react.tool_call_failed") + ": Tool not found: " + actionCall.getToolName() +
                    ". Available tools: " + String.join(", ", listToolNames());
@@ -1036,14 +1036,14 @@ public class ReActEngine {
 
             // Send tool execution success notification (for frontend timer display)
             if (typedCallback != null) {
-                typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_success"));
+                typedCallback.onTypedChunk(ContentType.ACTION_END, "success");
             }
 
             // Always return complete information for AI use
             return "✅ " + i18nService.get("react.tool_call_success") + ": " + resultStr;
         } catch (Exception ex) {
             if (typedCallback != null) {
-                typedCallback.onTypedChunk(ContentType.ACTION_END, i18nService.get("react.action_end_error"));
+                typedCallback.onTypedChunk(ContentType.ACTION_END, "error");
             }
             return "❌ " + i18nService.get("react.tool_call_failed") + ": Execution error: " + ex.getMessage();
         }

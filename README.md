@@ -62,7 +62,10 @@ public class MyApp {
 ```
 
 Visit `http://localhost:8080/auto-ai/index.html` to start chatting!
+Visit `http://localhost:8080/auto-ai/sidebar-demo.html` to view the sidebar demo.
 Visit `http://localhost:8080/auto-ai/demo.html` to view the complete example.
+
+Initiate your first conversation with AI, such as: "Please calculate the sum of 100 and 200, then send the result to me via notification.".
 
 **Configuration Notes**:
 - Web functionality is enabled by default, no additional configuration needed
@@ -80,80 +83,12 @@ Visit `http://localhost:8080/auto-ai/demo.html` to view the complete example.
 <dependencies>
     <!-- Spring-AutoAi Core (includes all dependencies, ready to use) -->
     <dependency>
-        <groupId>cn.autoai</groupId>
+        <groupId>io.github.bomiewall</groupId>
         <artifactId>spring-autoai-core</artifactId>
-        <version>0.1.6</version>
+        <version>0.1.9</version>
     </dependency>
 </dependencies>
 ```
-
-**Note:**
-- `spring-autoai-core.jar` is an **uber-jar (fat jar)** that contains all necessary dependencies
-- No need to add Spring, Jackson, or other dependencies separately
-- Simply add this dependency to use all features
-
-### Installing JAR to Local Maven Repository (Only When Needed)
-
-If you only have an `spring-autoai-core.jar` file, you need to install it to your local Maven repository first before referencing it in your project.
-
-#### Windows System
-
-Open Command Prompt (CMD) or PowerShell and execute:
-
-```cmd
-mvn install:install-file ^
-  -Dfile=spring-autoai-core.jar ^
-  -DgroupId=cn.autoai ^
-  -DartifactId=spring-autoai-core ^
-  -Dversion=0.1.6 ^
-  -Dpackaging=jar
-```
-
-**Notes:**
-- Use `^` as line continuation character (CMD)
-- In PowerShell, you can use backtick `` ` `` or write the command on a single line
-- Ensure the `spring-autoai-core.jar` file is in the current directory, or use the full path
-
-#### macOS / Linux System
-
-Open a terminal and execute:
-
-```bash
-mvn install:install-file \
-  -Dfile=spring-autoai-core.jar \
-  -DgroupId=cn.autoai \
-  -DartifactId=spring-autoai-core \
-  -Dversion=0.1.6 \
-  -Dpackaging=jar
-```
-
-**Notes:**
-- Use `\` as line continuation character
-- Ensure the `spring-autoai-core.jar` file is in the current directory, or use the full path
-- If you encounter permission issues, you may need to use `sudo` (not recommended)
-
-#### Verify Installation
-
-After successful installation, the following files will be generated in your local Maven repository:
-
-```
-~/.m2/repository/cn/autoai/spring-autoai-core/0.1.6/
-├── spring-autoai-core-0.1.6.jar
-├── spring-autoai-core-0.1.6.pom
-└── ...
-```
-
-#### Parameter Description
-
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `-Dfile` | JAR file path | `spring-autoai-core.jar` or `/path/to/spring-autoai-core.jar` |
-| `-DgroupId` | Maven Group ID | `cn.autoai` |
-| `-DartifactId` | Maven Artifact ID | `spring-autoai-core` |
-| `-Dversion` | Version number | `0.1.6` |
-| `-Dpackaging` | Packaging type | `jar` |
-| `-DgeneratePom` | Whether to generate POM | `true` (default) |
-
 
 ## Basic Configuration
 
@@ -281,7 +216,7 @@ autoai:
     model: GLM-4.7
 
     # API key (recommended to read from environment variables)
-    api-key: ${BIGMODEL_API_KEY:your-default-api-key}
+    api-key: ${BIG_MODEL_API_KEY:your-default-api-key}
 
     # API base URL (optional, defaults to adapter's default address)
     base-url: https://open.bigmodel.cn/api/coding/paas/v4
@@ -425,6 +360,7 @@ Spring-AutoAi provides a built-in chat interface that you can access directly:
 # After starting the application, visit
 http://localhost:8080/auto-ai/index.html
 http://localhost:8080/auto-ai/sidebar-demo.html
+http://localhost:8080/auto-ai/demo.html
 ```
 
 ### Method 2: Embed Chat Component into Existing Page

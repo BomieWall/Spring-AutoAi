@@ -5,19 +5,19 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>cn.autoai</groupId>
+    <groupId>io.github.bomiewall</groupId>
     <artifactId>spring-autoai-parent</artifactId>
-    <version>0.1.6</version>
+    <version>0.1.9</version>
   </parent>
 
   <artifactId>spring-autoai-demo-web</artifactId>
   <packaging>jar</packaging>
-  <name>Spring-AutoAi Demo Web</name>
+  <name>${project.groupId}:${project.artifactId}</name>
   <description>Spring-AutoAi Web Interface Demo Project</description>
 
   <dependencies>
     <dependency>
-      <groupId>cn.autoai</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>spring-autoai-core</artifactId>
       <version>${project.version}</version>
     </dependency>
