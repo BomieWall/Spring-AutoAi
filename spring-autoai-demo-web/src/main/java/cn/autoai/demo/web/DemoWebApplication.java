@@ -2,6 +2,7 @@ package cn.autoai.demo.web;
 
 import cn.autoai.core.annotation.AutoAiToolScan;
 import cn.autoai.core.spring.EnableAutoAi;
+import cn.autoai.demo.web.controller.OrderManagementController;
 import cn.autoai.demo.web.controller.UserManagementController;
 
 import org.springframework.boot.SpringApplication;
@@ -23,7 +24,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication
 @EnableAutoAi
-@AutoAiToolScan(classes = {DemoTools.class})
+@AutoAiToolScan(classes = {UserManagementController.class, OrderManagementController.class})
 public class DemoWebApplication {
 
     public static void main(String[] args) {

@@ -4,21 +4,51 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>cn.autoai</groupId>
+  <groupId>io.github.bomiewall</groupId>
   <artifactId>spring-autoai-parent</artifactId>
-  <version>0.1.6</version>
+  <version>0.1.9</version>
   <packaging>pom</packaging>
 
-  <name>Spring-AutoAi Framework</name>
+  <name>${project.groupId}:${project.artifactId}</name>
   <description>Universal Extensible AI Framework for Spring (Annotation Scanning + ReAct + OpenAI Protocol Compatible)</description>
+  <url>https://github.com/bomiewall/Spring-AutoAi</url>
 
   <modules>
     <module>spring-autoai-core</module>
-    <module>spring-autoai-demo-console</module>
-    <module>spring-autoai-demo-web</module>
   </modules>
+  <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+  </licenses>
+  <developers>
+    <developer>
+      <name>Bomie</name>
+      <email>hxb9908@gmail.com</email>
+      <organization>bomiewall</organization>
+      <organizationUrl>https://github.com/bomiewall</organizationUrl>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:git://github.com/bomiewall/Spring-AutoAi.git</connection>
+    <developerConnection>scm:git:ssh://github.com/bomiewall/Spring-AutoAi.git</developerConnection>
+    <url>https://github.com/bomiewall/Spring-AutoAi/tree/main</url>
+  </scm>
+
+  <distributionManagement>
+    <repository>
+      <id>central</id>
+      <url>https://central.sonatype.com/repository/maven2/</url>
+    </repository>
+    <snapshotRepository>
+      <id>central</id>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
 
   <properties>
+    <project.version>0.1.9</project.version>
     <java.version>17</java.version>
     <maven.compiler.release>${java.version}</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -38,6 +68,39 @@
   </dependencyManagement>
 
   <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>3.1.1</version>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.sonatype.central</groupId>
+        <artifactId>central-publishing-maven-plugin</artifactId>
+        <version>0.9.0</version>
+        <extensions>true</extensions>
+        <configuration>
+          <publishingServerId>central</publishingServerId>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>sign-artifacts</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
     <pluginManagement>
       <plugins>
         <plugin>
@@ -54,6 +117,66 @@
           <artifactId>spring-boot-maven-plugin</artifactId>
           <version>${spring.boot.version}</version>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>3.1.0</version>
+          <executions>
+              <execution>
+                  <id>attach-sources</id>
+                  <goals>
+                      <goal>jar-no-fork</goal>
+                  </goals>
+              </execution>
+          </executions>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.10.1</version>
+            <configuration>
+                <additionalJOptions>
+                    <additionalJOption>-Xdoclint:none</additionalJOption>
+                </additionalJOptions>
+                <detectOfflineLinks>false</detectOfflineLinks>
+                <failOnError>false</failOnError>
+            </configuration>
+            <executions>
+                <execution>
+                    <id>attach-javadocs</id>
+                    <goals>
+                        <goal>jar</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+        <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+        </plugin>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>pom-scoring-maven-plugin</artifactId>
+            <version>1.0.1</version>
+            <executions>
+              <execution>
+                <phase>validate</phase>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
       </plugins>
     </pluginManagement>
   </build>
