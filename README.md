@@ -772,6 +772,9 @@ public class OrderManagementController {
 
 The Spring-AutoAi framework supports frontend tool mechanisms, allowing AI models to call browser-side JavaScript functions to implement page interactions, data storage, user operations, and other functions.
 
+**You can control the front-end page through AI.**
+![Spring-AutoAi](./sp3.png)
+
 ### Core Features
 
 - **Ready to use**: 8 common built-in tools automatically available
