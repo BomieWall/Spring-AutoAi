@@ -67,7 +67,10 @@ Visit `http://localhost:8080/auto-ai/demo.html` to view the complete example.
 
 Initiate your first conversation with AI, such as: "Please calculate the sum of 100 and 200, then send the result to me via notification.".
 
+![Spring-AutoAi](./sp2.png)
+
 **Configuration Notes**:
+- Please use `Spring Boot 3.x` or a higher version (e.g., Spring Boot 3.3.x and above).
 - Web functionality is enabled by default, no additional configuration needed
 - To disable Web functionality, set `autoai.web.enabled: false` in `application.yml`
 
@@ -1716,5 +1719,3 @@ autoai:
 - AI can still understand previous conversation content
 
 ---
-
-
