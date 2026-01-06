@@ -23,7 +23,7 @@
 
 ## Project Introduction
 
-Spring-AutoAi is a lightweight, general-purpose AI framework based on Java/Spring. With minimal configuration, it quickly transforms your traditional Spring-based systems into intelligent AI Agent systems.
+Spring AutoAi is a lightweight general artificial intelligence framework based on Java/Spring. Through minimalist configuration, it can quickly transform your traditional Spring system into an intelligent system with an AI brain, enabling it to have autonomous planning and reasoning capabilities. Especially with its powerful tool execution capability, it can not only autonomously call backend interfaces but also achieve control over frontend pages.
 
 ### Core Features
 
