@@ -61,16 +61,16 @@ public class MyApp {
 }
 ```
 
-Visit `http://localhost:8080/auto-ai/index.html` to start chatting!
-Visit `http://localhost:8080/auto-ai/sidebar-demo.html` to view the sidebar demo.
-Visit `http://localhost:8080/auto-ai/demo.html` to view the complete example.
+### 2-Quick Use
+- Visit `http://localhost:8080/auto-ai/index.html` to start chatting!
+- Visit `http://localhost:8080/auto-ai/sidebar-demo.html` to view the sidebar demo.
+- Visit `http://localhost:8080/auto-ai/demo.html` to view the complete example.
 
 Initiate your first conversation with AI, such as: "Please calculate the sum of 100 and 200, then send the result to me via notification.".
 
 ![Spring-AutoAi](./sp2.png)
 
 **Configuration Notes**:
-- Please use `Spring Boot 3.x` or a higher version (e.g., Spring Boot 3.3.x and above).
 - Web functionality is enabled by default, no additional configuration needed
 - To disable Web functionality, set `autoai.web.enabled: false` in `application.yml`
 
@@ -92,6 +92,8 @@ Initiate your first conversation with AI, such as: "Please calculate the sum of 
     </dependency>
 </dependencies>
 ```
+**Configuration Notes**:
+- Please use `Spring Boot 3.x` or a higher version (e.g., Spring Boot 3.3.x and above).
 
 ## Basic Configuration
 
