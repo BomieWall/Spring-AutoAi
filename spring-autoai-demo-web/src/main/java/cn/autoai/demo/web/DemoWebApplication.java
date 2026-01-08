@@ -24,7 +24,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication
 @EnableAutoAi
-@AutoAiToolScan(classes = {UserManagementController.class, OrderManagementController.class})
+@AutoAiToolScan(classes = {UserManagementController.class,DemoTools.class})
 public class DemoWebApplication {
 
     public static void main(String[] args) {

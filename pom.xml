@@ -6,7 +6,7 @@
 
   <groupId>io.github.bomiewall</groupId>
   <artifactId>spring-autoai-parent</artifactId>
-  <version>0.1.9</version>
+  <version>0.1.10</version>
   <packaging>pom</packaging>
 
   <name>${project.groupId}:${project.artifactId}</name>
@@ -48,7 +48,7 @@
   </distributionManagement>
 
   <properties>
-    <project.version>0.1.9</project.version>
+    <project.version>0.1.10</project.version>
     <java.version>17</java.version>
     <maven.compiler.release>${java.version}</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

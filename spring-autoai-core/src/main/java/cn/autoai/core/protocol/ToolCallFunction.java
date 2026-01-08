@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 public class ToolCallFunction {
     private String name;
     private String arguments;
+    private String description;
 
     public ToolCallFunction() {
     }
@@ -32,5 +33,13 @@ public class ToolCallFunction {
 
     public void setArguments(String arguments) {
         this.arguments = arguments;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 }
