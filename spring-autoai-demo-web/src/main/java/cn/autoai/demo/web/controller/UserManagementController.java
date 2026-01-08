@@ -376,4 +376,336 @@ public class UserManagementController {
         public User getUser() { return user; }
         public void setUser(User user) { this.user = user; }
     }
+
+    /**
+     * 批量用户操作（复杂参数示例）
+     * 支持批量创建、更新、删除用户，包含复杂的嵌套对象、列表、Map、枚举等数据类型
+     */
+    @PostMapping("/batch")
+    @AutoAiTool(description = "批量用户操作，支持批量创建、更新、删除用户，包含复杂的嵌套对象、列表、Map、枚举等数据类型")
+    public BatchOperationResult batchUserOperations(@RequestBody BatchUserOperationsRequest request,
+                                                @RequestHeader(value = "X-Operator-Id", required = false) String operatorId) {
+        System.out.println("操作人员: " + operatorId);
+
+        if (request == null) {
+            return new BatchOperationResult(false, "批量操作请求不能为空", null);
+        }
+
+        if (request.operations == null || request.operations.isEmpty()) {
+            return new BatchOperationResult(false, "操作列表不能为空", null);
+        }
+
+        BatchOperationSummary summary = new BatchOperationSummary();
+        summary.requestId = request.requestId;
+        summary.operationType = request.operationType;
+        summary.totalCount = request.operations.size();
+        summary.successCount = 0;
+        summary.failureCount = 0;
+        summary.details = new ArrayList<>();
+        summary.timestamp = System.currentTimeMillis();
+
+        for (UserOperationItem item : request.operations) {
+            try {
+                UserOperationResult result = processUserOperation(item);
+                summary.details.add(result);
+                if (result.success) {
+                    summary.successCount++;
+                } else {
+                    summary.failureCount++;
+                }
+            } catch (Exception e) {
+                UserOperationResult errorResult = new UserOperationResult(
+                    false, item.userId, "ERROR", "处理失败: " + e.getMessage());
+                summary.details.add(errorResult);
+                summary.failureCount++;
+            }
+        }
+
+        return new BatchOperationResult(true, "批量操作完成", summary);
+    }
+
+    /**
+     * 处理单个用户操作
+     */
+    private UserOperationResult processUserOperation(UserOperationItem item) {
+        switch (item.operationType) {
+            case CREATE:
+                return handleCreateUser(item);
+            case UPDATE:
+                return handleUpdateUser(item);
+            case DELETE:
+                return handleDeleteUser(item);
+            default:
+                return new UserOperationResult(false, item.userId, "UNKNOWN_OPERATION",
+                    "未知的操作类型: " + item.operationType);
+        }
+    }
+
+    /**
+     * 处理创建用户
+     */
+    private UserOperationResult handleCreateUser(UserOperationItem item) {
+        if (item.userData == null) {
+            return new UserOperationResult(false, item.userId, "VALIDATION_ERROR", "用户数据不能为空");
+        }
+
+        String email = item.userData.email;
+        if (email == null || email.trim().isEmpty()) {
+            return new UserOperationResult(false, item.userId, "VALIDATION_ERROR", "邮箱不能为空");
+        }
+
+        // 检查邮箱是否已存在
+        boolean emailExists = userDatabase.values().stream()
+            .anyMatch(user -> email.equals(user.getEmail()));
+        if (emailExists) {
+            return new UserOperationResult(false, item.userId, "DUPLICATE_EMAIL",
+                "邮箱已存在: " + email);
+        }
+
+        User newUser = createUser(new User(
+            null,
+            item.userData.name,
+            email,
+            item.userData.department,
+            item.userData.salary
+        ));
+
+        return new UserOperationResult(true, newUser.getId().toString(), "SUCCESS", "用户创建成功");
+    }
+
+    /**
+     * 处理更新用户
+     */
+    private UserOperationResult handleUpdateUser(UserOperationItem item) {
+        Long userId;
+        if (item.userId == null || item.userId.trim().isEmpty()) {
+            return new UserOperationResult(false, null, "VALIDATION_ERROR", "用户ID不能为空");
+        }
+
+        try {
+            userId = Long.parseLong(item.userId);
+        } catch (NumberFormatException e) {
+            return new UserOperationResult(false, item.userId, "INVALID_ID", "用户ID格式错误");
+        }
+
+        User existingUser = userDatabase.get(userId);
+        if (existingUser == null) {
+            return new UserOperationResult(false, item.userId, "NOT_FOUND", "用户不存在");
+        }
+
+        if (item.userData != null) {
+            if (item.userData.name != null) {
+                existingUser.setName(item.userData.name);
+            }
+            if (item.userData.email != null) {
+                existingUser.setEmail(item.userData.email);
+            }
+            if (item.userData.department != null) {
+                existingUser.setDepartment(item.userData.department);
+            }
+            if (item.userData.salary != null) {
+                existingUser.setSalary(item.userData.salary);
+            }
+        }
+
+        userDatabase.put(userId, existingUser);
+        return new UserOperationResult(true, item.userId, "SUCCESS", "用户更新成功");
+    }
+
+    /**
+     * 处理删除用户
+     */
+    private UserOperationResult handleDeleteUser(UserOperationItem item) {
+        Long userId;
+        if (item.userId == null || item.userId.trim().isEmpty()) {
+            return new UserOperationResult(false, null, "VALIDATION_ERROR", "用户ID不能为空");
+        }
+
+        try {
+            userId = Long.parseLong(item.userId);
+        } catch (NumberFormatException e) {
+            return new UserOperationResult(false, item.userId, "INVALID_ID", "用户ID格式错误");
+        }
+
+        User removed = userDatabase.remove(userId);
+        if (removed == null) {
+            return new UserOperationResult(false, item.userId, "NOT_FOUND", "用户不存在");
+        }
+
+        return new UserOperationResult(true, item.userId, "SUCCESS", "用户删除成功");
+    }
+
+    // ========== 复杂参数内部类 ==========
+
+    /**
+     * 操作类型
+     */
+    public enum OperationType {
+        CREATE("创建"),
+        UPDATE("更新"),
+        DELETE("删除");
+
+        private final String description;
+
+        OperationType(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    /**
+     * 批量操作请求
+     */
+    public static class BatchUserOperationsRequest {
+        @AutoAiField(description = "请求ID，用于追踪", required = false, example = "REQ20240107001")
+        public String requestId;
+
+        @AutoAiField(description = "操作类型", required = false, example = "BATCH_UPDATE")
+        public String operationType;
+
+        @AutoAiField(description = "用户操作项列表", required = true)
+        public List<UserOperationItem> operations;
+
+        @AutoAiField(description = "是否在第一个失败时停止", required = false, example = "false")
+        public boolean stopOnFirstError;
+
+        @AutoAiField(description = "优先级", required = false, example = "HIGH")
+        public String priority;
+
+        @AutoAiField(description = "超时时间（秒）", required = false, example = "30")
+        public int timeout;
+
+        @AutoAiField(description = "自定义元数据", required = false)
+        public Map<String, Object> metadata;
+
+        @AutoAiField(description = "通知配置", required = false)
+        public NotificationConfig notificationConfig;
+    }
+
+    /**
+     * 用户操作项
+     */
+    public static class UserOperationItem {
+        @AutoAiField(description = "用户ID（更新和删除时必填）", required = false, example = "1")
+        public String userId;
+
+        @AutoAiField(description = "操作类型", required = true, example = "CREATE")
+        public OperationType operationType;
+
+        @AutoAiField(description = "用户数据（创建和更新时需要）", required = false)
+        public UserData userData;
+
+        @AutoAiField(description = "备注", required = false, example = "部门调整")
+        public String remarks;
+
+        @AutoAiField(description = "标签", required = false)
+        public List<String> tags;
+
+        @AutoAiField(description = "自定义属性", required = false)
+        public Map<String, String> customAttributes;
+    }
+
+    /**
+     * 用户数据
+     */
+    public static class UserData {
+        @AutoAiField(description = "用户姓名", required = true, example = "张三")
+        public String name;
+
+        @AutoAiField(description = "用户邮箱", required = true, example = "zhangsan@example.com")
+        public String email;
+
+        @AutoAiField(description = "部门", required = false, example = "技术部")
+        public String department;
+
+        @AutoAiField(description = "薪资", required = false, example = "50000.0")
+        public Double salary;
+
+        @AutoAiField(description = "职位", required = false, example = "高级工程师")
+        public String position;
+
+        @AutoAiField(description = "联系电话", required = false, example = "13800138000")
+        public String phone;
+
+        @AutoAiField(description = "入职日期", required = false, example = "2024-01-01")
+        public String joinDate;
+
+        @AutoAiField(description = "技能标签", required = false)
+        public List<String> skills;
+
+        @AutoAiField(description = "扩展信息", required = false)
+        public Map<String, Object> extensions;
+    }
+
+    /**
+     * 通知配置
+     */
+    public static class NotificationConfig {
+        @AutoAiField(description = "是否发送邮件通知", required = false, example = "true")
+        public boolean emailEnabled;
+
+        @AutoAiField(description = "是否发送短信通知", required = false, example = "false")
+        public boolean smsEnabled;
+
+        @AutoAiField(description = "是否发送钉钉通知", required = false, example = "true")
+        public boolean dingTalkEnabled;
+
+        @AutoAiField(description = "通知接收人列表", required = false)
+        public List<String> recipients;
+
+        @AutoAiField(description = "通知模板", required = false, example = "BATCH_OPERATION")
+        public String template;
+    }
+
+    /**
+     * 用户操作结果
+     */
+    public static class UserOperationResult {
+        public boolean success;
+        public String userId;
+        public String statusCode;
+        public String message;
+
+        public UserOperationResult() {}
+
+        public UserOperationResult(boolean success, String userId, String statusCode, String message) {
+            this.success = success;
+            this.userId = userId;
+            this.statusCode = statusCode;
+            this.message = message;
+        }
+    }
+
+    /**
+     * 批量操作摘要
+     */
+    public static class BatchOperationSummary {
+        public String requestId;
+        public String operationType;
+        public int totalCount;
+        public int successCount;
+        public int failureCount;
+        public List<UserOperationResult> details;
+        public long timestamp;
+    }
+
+    /**
+     * 批量操作结果
+     */
+    public static class BatchOperationResult {
+        public boolean success;
+        public String message;
+        public BatchOperationSummary summary;
+
+        public BatchOperationResult() {}
+
+        public BatchOperationResult(boolean success, String message, BatchOperationSummary summary) {
+            this.success = success;
+            this.message = message;
+            this.summary = summary;
+        }
+    }
 }

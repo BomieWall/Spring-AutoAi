@@ -263,7 +263,7 @@ public class AutoAiStreamController {
                 checkAborted();
 
                 // Filter internal tags and process content
-                String processedContent = processContent(content);
+                String processedContent = content;
                 if (processedContent.isEmpty()) {
                     return;
                 }
@@ -321,26 +321,26 @@ public class AutoAiStreamController {
         /**
          * Process content: filter tags, preserve line breaks and spaces
          */
-        private String processContent(String content) {
-            if (content == null) {
-                return "";
-            }
+        // private String processContent(String content) {
+        //     if (content == null) {
+        //         return "";
+        //     }
 
-            // Remove internal tags - extended filtering rules
-            String filtered = INTERNAL_TAG_PATTERN.matcher(content).replaceAll("");
+        //     // Remove internal tags - extended filtering rules
+        //     String filtered = INTERNAL_TAG_PATTERN.matcher(content).replaceAll("");
 
-            // Remove other possible internal tags and symbols (only remove the marker itself, do not remove surrounding content)
-            filtered = filtered.replaceAll("</think>", "")
-                              .replaceAll("<think>", "")
-                              .replaceAll("♫:", "")
-                              .replaceAll("🎵:", "")
-                              .replaceAll("♪:", "")
-                              .replaceAll("♬:", "");
+        //     // Remove other possible internal tags and symbols (only remove the marker itself, do not remove surrounding content)
+        //     filtered = filtered.replaceAll("</think>", "")
+        //                       .replaceAll("<think>", "")
+        //                       .replaceAll("♫:", "")
+        //                       .replaceAll("🎵:", "")
+        //                       .replaceAll("♪:", "")
+        //                       .replaceAll("♬:", "");
 
-            // Only remove whitespace characters at the beginning and end (newline + space), preserve format in the middle
-            // return filtered.replaceAll("^[\\n\\r\\s]+|[\\n\\r\\s]+$", "");
-            return filtered;
-        }
+        //     // Only remove whitespace characters at the beginning and end (newline + space), preserve format in the middle
+        //     // return filtered.replaceAll("^[\\n\\r\\s]+|[\\n\\r\\s]+$", "");
+        //     return filtered;
+        // }
         // }
 
     }

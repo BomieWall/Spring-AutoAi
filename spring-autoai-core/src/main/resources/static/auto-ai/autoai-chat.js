@@ -1,6 +1,11 @@
 // ============================================
 // Built-in Frontend Tools Definition
 // ============================================
+
+// 全局存储SVG内容
+const svgContentStorage = new Map();
+let svgModalZIndex = 10000;
+
 export const BUILTIN_FRONTEND_TOOLS = [
   // localStorage operation tools
   {
@@ -249,6 +254,71 @@ export const BUILTIN_FRONTEND_TOOLS = [
         return { error: 'Refresh failed: ' + error.message };
       }
     }
+  },
+  // SVG绘图工具
+  {
+    name: 'drawSvg',
+    description: 'Draw graphics and display them in a popup window. Supports creating and updating. AI can continue modifying existing graphics by specifying the id',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Unique identifier for the graphic, used for subsequent modifications',
+          example: 'chart_001'
+        },
+        content: {
+          type: 'string',
+          description: 'SVG code content of the graphic. Note: the graphic size should match the window size',
+          example: '<svg width="200" height="200"><circle cx="100" cy="100" r="50" fill="red"/></svg>'
+        },
+        title: {
+          type: 'string',
+          description: 'Popup window title',
+          example: 'My Chart'
+        },
+        width: {
+          type: 'number',
+          description: 'Popup window width (pixels), defaults to 800 if not specified',
+          example: 800
+        },
+        height: {
+          type: 'number',
+          description: 'Popup window height (pixels), defaults to 600 if not specified',
+          example: 600
+        }
+      },
+      required: ['id', 'content']
+    },
+    fn: async (args) => {
+      try {
+        return showSvgModal(args);
+      } catch (error) {
+        return { error: 'Failed to display SVG graphic: ' + error.message };
+      }
+    }
+  },
+  {
+    name: 'getSvg',
+    description: 'Get the SVG graphic content for the specified id, used for AI to read and modify graphics',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Unique identifier for the graphic',
+          example: 'chart_001'
+        }
+      },
+      required: ['id']
+    },
+    fn: async (args) => {
+      try {
+        return getSvgContent(args.id);
+      } catch (error) {
+        return { error: 'Failed to get SVG graphic: ' + error.message };
+      }
+    }
   }
 ];
 
@@ -459,6 +529,397 @@ function showModernNotification(message, type = 'info', duration = 3000) {
   if (duration > 0) {
     setTimeout(closeNotification, duration);
   }
+}
+
+// ============================================
+// SVG绘图工具辅助函数
+// ============================================
+
+/**
+ * 显示SVG图形在弹出层中
+ * @param {Object} args - 参数对象，包含id、content、title、width、height
+ * @returns {Object} - 操作结果
+ */
+function showSvgModal(args) {
+  const { id, content, title, width = 800, height = 600 } = args;
+
+  // 存储SVG内容
+  svgContentStorage.set(id, {
+    content,
+    title: title || `Graphic ${id}`,
+    width,
+    height,
+    timestamp: Date.now()
+  });
+
+  // 检查是否已存在该id的弹窗
+  const existingModal = document.getElementById(`autoai-svg-modal-${id}`);
+  const modal = existingModal || document.createElement('div');
+  modal.id = `autoai-svg-modal-${id}`;
+
+  // 新窗口时增加 z-index
+  if (!existingModal) {
+    svgModalZIndex++;
+  }
+
+  // 设置弹窗样式（初始位置居中）
+  modal.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: ${width}px;
+    height: ${height}px;
+    max-width: 95vw;
+    max-height: 95vh;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    z-index: ${svgModalZIndex};
+    overflow: hidden;
+    ${existingModal ? '' : 'opacity: 0;'}
+  `;
+
+  // 标题栏
+  const header = modal.querySelector('.autoai-svg-modal-header') || document.createElement('div');
+  header.className = 'autoai-svg-modal-header';
+  header.style.cssText = `
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+    flex-shrink: 0;
+    cursor: move;
+    user-select: none;
+  `;
+
+  // 左侧区域：折叠按钮 + 标题
+  const leftSection = header.querySelector('.autoai-svg-modal-left') || document.createElement('div');
+  leftSection.className = 'autoai-svg-modal-left';
+  leftSection.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  `;
+
+  // 折叠按钮
+  const collapseBtn = header.querySelector('.autoai-svg-modal-collapse') || document.createElement('button');
+  collapseBtn.className = 'autoai-svg-modal-collapse';
+  collapseBtn.innerHTML = `<svg viewBox="64 64 896 896" width="14" height="14" fill="currentColor">
+    <path d="M880 112H144c-17.7 0-32 14.3-32 32v736c0 17.7 14.3 32 32 32h736c17.7 0 32-14.3 32-32V144c0-17.7-14.3-32-32-32zm-40 728H184V184h656v656zM336 472h352v48H336z"/>
+  </svg>`;
+  collapseBtn.style.cssText = `
+    background: transparent;
+    border: none;
+    color: rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  `;
+  collapseBtn.onmouseenter = () => {
+    collapseBtn.style.background = 'rgba(0, 0, 0, 0.06)';
+    collapseBtn.style.color = 'rgba(0, 0, 0, 0.75)';
+  };
+  collapseBtn.onmouseleave = () => {
+    collapseBtn.style.background = 'transparent';
+    collapseBtn.style.color = 'rgba(0, 0, 0, 0.45)';
+  };
+
+  const titleText = header.querySelector('.autoai-svg-modal-title') || document.createElement('div');
+  titleText.className = 'autoai-svg-modal-title';
+  titleText.style.cssText = `
+    font-size: 14px;
+    font-weight: 600;
+    color: #262626;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  `;
+  titleText.textContent = title || `图形 ${id}`;
+
+  // 右侧区域：下载按钮 + 关闭按钮
+  const rightSection = header.querySelector('.autoai-svg-modal-right') || document.createElement('div');
+  rightSection.className = 'autoai-svg-modal-right';
+  rightSection.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  `;
+
+  // 下载按钮
+  const downloadBtn = header.querySelector('.autoai-svg-modal-download') || document.createElement('a');
+  downloadBtn.className = 'autoai-svg-modal-download';
+  downloadBtn.innerHTML = `<svg viewBox="64 64 896 896" width="16" height="16" fill="currentColor">
+    <path d="M505.7 661a8 8 0 0012.6 0l112-141.7c4.1-5.2.4-12.9-6.3-12.9h-74.1V168c0-4.4-3.6-8-8-8h-60c-4.4 0-8 3.6-8 8v338.3h-74.1c-6.7 0-10.4 7.7-6.3 12.9l112 141.8zM878 626h-60c-4.4 0-8 3.6-8 8v154H214V634c0-4.4-3.6-8-8-8h-60c-4.4 0-8 3.6-8 8v198c0 4.4 3.6 8 8 8h752c4.4 0 8-3.6 8-8V634c0-4.4-3.6-8-8-8z"/>
+  </svg>`;
+  downloadBtn.style.cssText = `
+    background: transparent;
+    border: none;
+    color: rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    text-decoration: none;
+  `;
+  downloadBtn.onmouseenter = () => {
+    downloadBtn.style.background = 'rgba(0, 0, 0, 0.06)';
+    downloadBtn.style.color = 'rgba(0, 0, 0, 0.75)';
+  };
+  downloadBtn.onmouseleave = () => {
+    downloadBtn.style.background = 'transparent';
+    downloadBtn.style.color = 'rgba(0, 0, 0, 0.45)';
+  };
+  downloadBtn.onclick = (e) => {
+    e.preventDefault();
+    // 将SVG转换为Blob并下载
+    const blob = new Blob([content], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const tempLink = document.createElement('a');
+    tempLink.href = url;
+    tempLink.download = `${id}.svg`;
+    document.body.appendChild(tempLink);
+    tempLink.click();
+    document.body.removeChild(tempLink);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  };
+
+  const closeBtn = header.querySelector('.autoai-svg-modal-close') || document.createElement('button');
+  closeBtn.className = 'autoai-svg-modal-close';
+  closeBtn.innerHTML = `<svg viewBox="64 64 896 896" width="16" height="16" fill="currentColor">
+    <path d="M563.8 512l262.5-312.9c4.4-5.2.4-13.1-6.1-13.1h-79.8c-4.7 0-9.2 2.1-12.3 5.7L511.6 449.8 295.1 191.7c-3-3.6-7.5-5.7-12.3-5.7H203c-6.5 0-10.5 7.8-6.1 13.1L459.4 512 196.9 824.9A7.95 7.95 0 00203 838h79.8c4.7 0 9.2-2.1 12.3-5.7l216.5-258.1 216.5 258.1c3 3.6 7.5 5.7 12.3 5.7h79.8c6.5 0 10.5-7.8 6.1-13.1L563.8 512z"/>
+  </svg>`;
+  closeBtn.style.cssText = `
+    background: transparent;
+    border: none;
+    color: rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  `;
+  closeBtn.onmouseenter = () => {
+    closeBtn.style.background = 'rgba(0, 0, 0, 0.06)';
+    closeBtn.style.color = 'rgba(0, 0, 0, 0.75)';
+  };
+  closeBtn.onmouseleave = () => {
+    closeBtn.style.background = 'transparent';
+    closeBtn.style.color = 'rgba(0, 0, 0, 0.45)';
+  };
+
+  // 内容区域
+  const contentArea = modal.querySelector('.autoai-svg-modal-content') || document.createElement('div');
+  contentArea.className = 'autoai-svg-modal-content';
+  contentArea.style.cssText = `
+    // flex: 1;
+    padding: 5px;
+    overflow: auto;
+    background: white;
+    // display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  `;
+
+  contentArea.innerHTML = content;
+
+  // SVG容器
+  // const svgContainer = contentArea.querySelector('.autoai-svg-container') || document.createElement('div');
+  // svgContainer.className = 'autoai-svg-container';
+  // svgContainer.style.cssText = `
+  //   padding: 0px;
+  // `;
+  // svgContainer.innerHTML = content;
+
+  // 信息栏
+  const footer = modal.querySelector('.autoai-svg-modal-footer') || document.createElement('div');
+  footer.className = 'autoai-svg-modal-footer';
+  footer.style.cssText = `
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #fafafa;
+    border-top: 1px solid #f0f0f0;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+  `;
+
+  const idInfo = footer.querySelector('.autoai-svg-modal-id') || document.createElement('div');
+  idInfo.className = 'autoai-svg-modal-id';
+  idInfo.textContent = `ID: ${id}`;
+
+  const sizeInfo = footer.querySelector('.autoai-svg-modal-size') || document.createElement('div');
+  sizeInfo.className = 'autoai-svg-modal-size';
+  sizeInfo.textContent = `尺寸: ${width} × ${height}`;
+
+  // 重新构建DOM结构
+  if (!existingModal) {
+    leftSection.appendChild(collapseBtn);
+    leftSection.appendChild(titleText);
+    rightSection.appendChild(downloadBtn);
+    rightSection.appendChild(closeBtn);
+    header.appendChild(leftSection);
+    header.appendChild(rightSection);
+    // contentArea.appendChild(svgContainer);
+    footer.appendChild(idInfo);
+    footer.appendChild(sizeInfo);
+    modal.appendChild(header);
+    modal.appendChild(contentArea);
+    modal.appendChild(footer);
+    document.body.appendChild(modal);
+
+    // 添加淡入动画
+    requestAnimationFrame(() => {
+      modal.style.transition = 'opacity 0.3s ease';
+      modal.style.opacity = '1';
+    });
+  }
+
+  // 窗口拖动功能
+  let isDragging = false;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
+  let currentLeft = window.innerWidth / 2;
+  let currentTop = window.innerHeight / 2;
+
+  header.onmousedown = (e) => {
+    if (e.target.closest('button') || e.target.closest('a')) {
+      return;
+    }
+    isDragging = true;
+    const rect = modal.getBoundingClientRect();
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+    currentLeft = rect.left;
+    currentTop = rect.top;
+    header.style.cursor = 'grabbing';
+  };
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const newX = e.clientX - dragOffsetX;
+    const newY = e.clientY - dragOffsetY;
+    currentLeft = newX;
+    currentTop = newY;
+    modal.style.left = `${newX}px`;
+    modal.style.top = `${newY}px`;
+    modal.style.transform = 'none';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      header.style.cursor = 'move';
+    }
+  });
+
+  // 折叠功能
+  let isCollapsed = false;
+  const originalHeight = `${height}px`;
+  const originalMaxHeight = '95vh';
+  collapseBtn.onclick = () => {
+    isCollapsed = !isCollapsed;
+    if (isCollapsed) {
+      contentArea.style.display = 'none';
+      footer.style.display = 'none';
+      modal.style.height = 'auto';
+      modal.style.maxHeight = 'auto';
+      collapseBtn.innerHTML = `<svg viewBox="64 64 896 896" width="14" height="14" fill="currentColor">
+        <path d="M336 472h352v48H336z M144 112h736c17.7 0 32 14.3 32 32v736c0 17.7-14.3 32-32 32H144c-17.7 0-32-14.3-32-32V144c0-17.7 14.3-32 32-32zm728 728H184V184h688v656z"/>
+      </svg>`;
+    } else {
+      contentArea.style.display = 'block';
+      footer.style.display = 'flex';
+      modal.style.height = originalHeight;
+      modal.style.maxHeight = originalMaxHeight;
+      collapseBtn.innerHTML = `<svg viewBox="64 64 896 896" width="14" height="14" fill="currentColor">
+        <path d="M880 112H144c-17.7 0-32 14.3-32 32v736c0 17.7 14.3 32 32 32h736c17.7 0 32-14.3 32-32V144c0-17.7-14.3-32-32-32zm-40 728H184V184h656v656zM336 472h352v48H336z"/>
+      </svg>`;
+      // 等待DOM更新后重新计算高度
+      requestAnimationFrame(() => {
+        const newHeight = header.offsetHeight + contentArea.offsetHeight + footer.offsetHeight;
+        if (newHeight > 0) {
+          modal.style.height = `${newHeight}px`;
+        }
+      });
+    }
+  };
+
+  // 关闭函数
+  const closeModal = () => {
+    modal.style.opacity = '0';
+    setTimeout(() => {
+      if (modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+    }, 300);
+  };
+
+  closeBtn.onclick = closeModal;
+
+  // 窗口点击置顶功能
+  const bringToFront = () => {
+    svgModalZIndex++;
+    modal.style.zIndex = svgModalZIndex;
+  };
+
+  modal.addEventListener('mousedown', bringToFront);
+
+  return {
+    success: true,
+    message: `SVG graphic displayed, ID: ${id}`,
+    id,
+    title: title || `Graphic ${id}`,
+    size: { width, height }
+  };
+}
+
+/**
+ * 获取指定id的SVG图形内容
+ * @param {string} id - 图形标识符
+ * @returns {Object} - SVG内容信息
+ */
+function getSvgContent(id) {
+  const svgData = svgContentStorage.get(id);
+
+  if (!svgData) {
+    return {
+      success: false,
+      error: `SVG graphic with ID "${id}" not found`
+    };
+  }
+
+  return {
+    success: true,
+    id,
+    title: svgData.title,
+    content: svgData.content,
+    width: svgData.width,
+    height: svgData.height,
+    timestamp: svgData.timestamp
+  };
 }
 
 // AutoAi Chat Client: Encapsulates OpenAI-compatible interface requests.
@@ -683,6 +1144,10 @@ export class AutoAiChatWidget {
 
     // New: Frontend tool management
     this.frontendTools = new Map();  // toolName -> {fn, definition}
+
+    // Action outing animation control
+    this.actionOutingShown = false; // 是否已经显示了 outing 动画
+    this.actionStarted = false;     // 是否已经收到 ACTION_START
 
     // 1. Register built-in tools first
     this.registerFrontendTools(BUILTIN_FRONTEND_TOOLS);
@@ -1808,6 +2273,10 @@ export class AutoAiChatWidget {
     this.lastProcessedIndex = 0;
     this.firstBlockCreated = false;
     this.typingIndicator = null;
+
+    // 初始化 outing 动画相关状态
+    this.actionOutingShown = false;
+    this.actionStarted = false;
   }
 
   // Clean up streaming state
@@ -1817,10 +2286,16 @@ export class AutoAiChatWidget {
     this.currentBlock = null;
     this.currentBlockType = null;
     this.lastProcessedIndex = 0;
-    this.pendingMessageElement = null;
+    
     this.firstBlockCreated = false;
     this.removeTypingIndicator();
     this.stopActionTimer();  // Clear timer
+
+    // 清理 outing 动画相关状态
+    this.actionOutingShown = false;
+    this.actionStarted = false;
+    this.hideActionOutingAnimation(this.pendingMessageElement);  // 隐藏动画
+    this.pendingMessageElement = null;
   }
 
   // Reset send button
@@ -1883,8 +2358,9 @@ export class AutoAiChatWidget {
       'THINKING': 'thinking',
       'REASONING': 'reasoning',
       'ACTION': 'action',
-      'ACTION_START': 'action_start',  // New: action start type
-      'ACTION_END': 'action_end',      // New: action end type
+      'ACTION_OUTING': 'action_outing',  // Action outputting state
+      'ACTION_START': 'action_start',    // Action start type
+      'ACTION_END': 'action_end',        // Action end type
       'OBSERVATION': 'observation',
       'ANSWER': 'answer',
       'ASK': 'ask',
@@ -1894,9 +2370,28 @@ export class AutoAiChatWidget {
 
     const frontendType = typeMapping[type] || 'content';
 
-    // Special handling for ACTION_START - display execution timer
+    // Special handling for ACTION_OUTING - display loading animation
+    if (frontendType === 'action_outing') {
+      // 显示或更新动画和输出长度
+      if (!this.actionStarted) {
+        if(!this.actionOutingShown)
+          this.showActionOutingAnimation(messageElement, content);
+        else
+          this.updateActionOutingLength(messageElement,content);
+      } 
+      return;
+    }
+
+    // Special handling for ACTION_START - display execution timer and hide loading animation
     if (frontendType === 'action_start') {
-      this.startActionTimer(messageElement);
+      // 标记已收到 ACTION_START
+      this.actionStarted = true;
+      // 如果已经显示了 outing 动画，隐藏它
+      if (this.actionOutingShown) {
+        this.hideActionOutingAnimation(messageElement);
+      }
+      // 启动执行计时器
+      this.startActionTimer(messageElement, content);
       return;
     }
 
@@ -1904,6 +2399,12 @@ export class AutoAiChatWidget {
     if (frontendType === 'action_end') {
       const isSuccess = content === 'success';
       this.stopActionTimer(isSuccess);
+      // 重置状态，以便下次 action 可以重新显示动画
+      this.actionStarted = false;
+      this.actionOutingShown = false;
+       if (this.actionOutingShown) {
+        this.hideActionOutingAnimation(messageElement);
+      }
       return;
     }
 
@@ -1914,6 +2415,11 @@ export class AutoAiChatWidget {
 
     // If type changes
     if (this.currentBlockType !== frontendType) {
+      // 当离开 action 类型时，重置状态
+      if (this.currentBlockType === 'action' && frontendType !== 'action') {
+        this.actionStarted = false;
+        this.actionOutingShown = false;
+      }
       // Render previously accumulated content first
       if (this.currentBlock && this.blockContentBuffer) {
         this.renderFinalContent(this.currentBlock, this.blockContentBuffer);
@@ -1930,13 +2436,161 @@ export class AutoAiChatWidget {
       }
       this.blockContentBuffer += content;
 
+      // 如果是 action 类型开始输出实际内容，标记 actionStarted
+      if (frontendType === 'action' && !this.actionStarted) {
+        this.actionStarted = true;
+      }
+
       // Display plain text preview in real-time
       this.showRawPreview(this.currentBlock, this.blockContentBuffer);
     }
   }
 
+  // Show action outputting animation (loading state while ACTION is being generated)
+  showActionOutingAnimation(messageElement, actionDesc = '') {
+    // 避免重复显示
+    if (this.actionOutingShown) {
+      return;
+    }
+
+    // 标记为已显示
+    this.actionOutingShown = true;
+
+    // If current block is not action, create one first
+    if (this.currentBlockType !== 'action') {
+      // Render previously accumulated content first
+      if (this.currentBlock && this.blockContentBuffer) {
+        this.renderFinalContent(this.currentBlock, this.blockContentBuffer);
+        this.blockContentBuffer = '';
+      }
+      this.createNewBlock(messageElement, 'action');
+    }
+
+    // Add loading animation in current action block
+    const contentDiv = this.currentBlock;
+    const loadingDisplay = document.createElement('div');
+    loadingDisplay.className = 'action-outing-loading';
+    loadingDisplay.id = 'action-outing-loading-display';
+    loadingDisplay.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      color: #6b7280;
+      padding: 8px 0;
+      animation: fadeIn 0.3s ease;
+    `;
+
+    // Add spinning icon
+    const spinner = document.createElement('span');
+    spinner.className = 'action-outing-spinner';
+    spinner.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10" stroke="#6b7280" stroke-width="3" stroke-opacity="0.3"/>
+        <path d="M12 2a10 10 0 0 1 10 10" stroke="#3b82f6" stroke-width="3" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+        </path>
+      </svg>
+    `;
+    loadingDisplay.appendChild(spinner);
+
+    // Add loading text
+    const loadingText = document.createElement('span');
+    loadingText.className = 'action-outing-text';
+    loadingText.style.cssText = `
+      color: #6b7280;
+      font-size: 13px;
+      font-style: italic;
+    `;
+    loadingText.textContent = this.t('widget.outputting');
+    loadingDisplay.appendChild(loadingText);
+
+    // Add length display
+    const lengthDisplay = document.createElement('span');
+    lengthDisplay.className = 'action-outing-length';
+    lengthDisplay.style.cssText = `
+      color: #9ca3af;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      min-width: 40px;
+      text-align: center;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    `;
+    lengthDisplay.textContent = '0 bytes';
+    loadingDisplay.appendChild(lengthDisplay);
+
+    // Add fade-in animation style if not exists
+    if (!document.getElementById('action-outing-animation-style')) {
+      const style = document.createElement('style');
+      style.id = 'action-outing-animation-style';
+      style.textContent = `
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-5px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; transform: translateY(0); }
+          to { opacity: 0; transform: translateY(-5px); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    contentDiv.appendChild(loadingDisplay);
+    this.scrollToBottom();
+  }
+
+  // Hide action outputting animation
+  hideActionOutingAnimation(messageElement) {
+    const loadingDisplay = messageElement.querySelector('.action-outing-loading');
+    if (loadingDisplay) {
+      // loadingDisplay.style.animation = 'fadeOut 0.2s ease';
+      // setTimeout(() => {
+      //   if (loadingDisplay.parentNode) {
+      //     loadingDisplay.parentNode.removeChild(loadingDisplay);
+      //   }
+      // }, 200);
+      loadingDisplay.style.display = 'none';
+       if (loadingDisplay.parentNode) {
+          loadingDisplay.parentNode.removeChild(loadingDisplay);
+        }
+    }
+    // 重置状态标志
+    this.actionOutingShown = false;
+  }
+
+  // 更新 action 输出长度显示
+  updateActionOutingLength(messageElement, lengthStr) {
+    const lengthDisplay = messageElement.querySelector('.action-outing-length');
+    if (lengthDisplay) {
+      const length = parseInt(lengthStr) || 0;
+      // 格式化长度显示
+      let lengthText = '';
+      if (length < 1024) {
+        lengthText = `${length} B`;
+      } else if (length < 1024 * 1024) {
+        lengthText = `${(length / 1024).toFixed(1)} KB`;
+      } else {
+        lengthText = `${(length / (1024 * 1024)).toFixed(2)} MB`;
+      }
+
+      lengthDisplay.textContent = lengthText;
+
+      // 添加高亮动画效果
+      // lengthDisplay.style.backgroundColor = '#dbeafe';
+      // lengthDisplay.style.color = '#1d4ed8';
+      // setTimeout(() => {
+      //   lengthDisplay.style.backgroundColor = '#f3f4f6';
+      //   lengthDisplay.style.color = '#9ca3af';
+      // }, 100);
+    }
+  }
+
   // Start execution timer
-  startActionTimer(messageElement) {
+  startActionTimer(messageElement, actionDesc = '') {
     // Clear previous timer
     this.stopActionTimer();
 
@@ -1960,7 +2614,23 @@ export class AutoAiChatWidget {
       gap: 8px;
       width: 100%;
       color: #6b7280;
+      flex-wrap: wrap;
+      margin-bottom: 2px;
     `;
+
+    // Add action description if provided
+    if (actionDesc && actionDesc.trim()) {
+      const descLabel = document.createElement('span');
+      descLabel.className = 'action-description';
+      descLabel.style.cssText = `
+        color: #374151;
+        padding: 2px 8px;
+        background-color: #f3f4f6;
+        border-radius: 4px;
+      `;
+      descLabel.textContent = actionDesc.trim(); 
+      timerDisplay.appendChild(descLabel);
+    }
 
     // Add spinning icon
     const spinner = document.createElement('span');
@@ -2003,17 +2673,32 @@ export class AutoAiChatWidget {
       const elapsed = (Date.now() - this.actionTimer.startTime) / 1000;
       const timerDisplay = this.actionTimer.element;
       if (timerDisplay) {
+        // Find and save the action description if exists
+        const descLabel = timerDisplay.querySelector('.action-description');
+
+        // Find and remove spinner and timer text
+        const spinner = timerDisplay.querySelector('svg');
+        const timerText = timerDisplay.querySelector('.action-timer-text');
+        if (spinner) spinner.remove();
+        if (timerText) timerText.remove();
+
+        // Create status element
+        const statusElement = document.createElement('span');
         if (isSuccess) {
-          timerDisplay.innerHTML = `
-            <span style="color: #059669;">✓ ${this.t("widget.execution_success")}</span>
-            <span style="color: #6b7280; margin-left: 8px;">${this.t("block_label.execution_time", elapsed.toFixed(1))}</span>
-          `;
+          statusElement.style.color = '#059669';
+          statusElement.textContent = '✓ ' + this.t("widget.execution_success");
         } else {
-          timerDisplay.innerHTML = `
-            <span style="color: #dc2626;">✗ ${this.t("widget.execution_failed")}</span>
-            <span style="color: #6b7280; margin-left: 8px;">${this.t("block_label.execution_time", elapsed.toFixed(1))}</span>
-          `;
+          statusElement.style.color = '#dc2626';
+          statusElement.textContent = '✗ ' + this.t("widget.execution_failed");
         }
+        timerDisplay.appendChild(statusElement);
+
+        // Create time element
+        const timeElement = document.createElement('span');
+        timeElement.style.color = '#6b7280';
+        timeElement.style.marginLeft = '8px';
+        timeElement.textContent = this.t("block_label.execution_time", elapsed.toFixed(1));
+        timerDisplay.appendChild(timeElement);
       }
 
       this.actionTimer = null;
@@ -2023,6 +2708,9 @@ export class AutoAiChatWidget {
   // Display raw text preview (during streaming)
   showRawPreview(blockElement, content) {
     if (!blockElement) return;
+
+    // 过滤掉新格式标签
+    const filteredContent = this.filterTags(content);
 
     // Clear previous preview content
     const existingPreview = blockElement.querySelector('.stream-preview');
@@ -2035,7 +2723,7 @@ export class AutoAiChatWidget {
     preview.className = 'stream-preview';
     preview.style.whiteSpace = 'pre-wrap';
     preview.style.wordBreak = 'break-word';
-    preview.textContent = content;
+    preview.textContent = filteredContent;
 
     blockElement.appendChild(preview);
   }
@@ -2043,6 +2731,9 @@ export class AutoAiChatWidget {
   // Render final content (Markdown formatted)
   renderFinalContent(blockElement, content) {
     if (!blockElement || !content) return;
+
+    // 过滤掉新格式标签
+    const filteredContent = this.filterTags(content);
 
     // Clear preview content
     const existingPreview = blockElement.querySelector('.stream-preview');
@@ -2061,9 +2752,18 @@ export class AutoAiChatWidget {
     rendered.className = 'rendered-content';
 
     // Parse and render Markdown
-    this.parseAndRenderMarkdown(rendered, content);
+    this.parseAndRenderMarkdown(rendered, filteredContent);
 
     blockElement.appendChild(rendered);
+  }
+
+  // 过滤新格式标签 <TAG>content</TAG>
+  filterTags(content) {
+    return content;
+    // if (!content) return content;
+    // return content
+    //   .replace(/<(THINK|ACTION|ANSWER|ASK|OBSERVE|DONE)>/g, '')
+    //   .replace(/<\/(THINK|ACTION|ANSWER|ASK|OBSERVE|DONE)>/g, '');
   }
 
   // Parse and render Markdown content
@@ -2456,17 +3156,17 @@ export class AutoAiChatWidget {
   detectContentType(content) {
     const line = content.trim();
 
-    // Detect emoji identifiers (already added by backend)
-    if (line.includes("🤔") || line.includes("Thinking:") || line.includes("Thinking：")) {
+    // 只检测新格式 <TAG>
+    if (line.includes("<THINK>")) {
       return "thinking";
-    } else if (line.includes("⚡") || line.includes("Action:") || line.includes("Action：")) {
+    } else if (line.includes("<ACTION>")) {
       return "action";
-    } else if (line.includes("👁️") || line.includes("Observation:") || line.includes("Observation：")) {
-      return "observation";
-    } else if (line.includes("✅") && (line.includes("Answer:") || line.includes("Answer："))) {
+    } else if (line.includes("<ANSWER>")) {
       return "answer";
-    } else if (line.includes("Tool call successful") || line.includes("✅ Tool call successful")) {
-      return "observation"; // Tool call success belongs to observation results
+    } else if (line.includes("<ASK>")) {
+      return "ask";
+    } else if (line.includes("<OBSERVE>")) {
+      return "observation";
     }
 
     // If no clear type identifier, continue using current type or default type
@@ -2513,7 +3213,7 @@ export class AutoAiChatWidget {
     contentDiv.className = "autoai-chat__block-content";
 
     // Use title layout uniformly
-    if (titleMap[type]) {
+    if (titleMap[type] && type !== 'action') {
       const title = document.createElement("div");
       title.className = "autoai-chat__block-title";
       title.textContent = titleMap[type];

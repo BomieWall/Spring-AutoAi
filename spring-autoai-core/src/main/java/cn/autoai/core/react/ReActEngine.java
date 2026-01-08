@@ -57,20 +57,15 @@ public class ReActEngine {
     static final String ASK="ASK";
 
     private static final List<String> COMPLETION_MARKERS = List.of(
-        ANSWER+":",COMPLETION+":"
+        ANSWER,COMPLETION
     );
 
     private static final List<String> INTERUPTION_MARKERS = List.of(
-        ASK+":"
+        ASK
     );
 
-    private static final Pattern THOUGHT_PATTERN = Pattern.compile(""+THINKING+"[:：]\\s*(.+?)(?=\\n"+ACTION+"|\\n"+ANSWER+"|\\n"+ASK+"|$)", Pattern.DOTALL);
-    private static final Pattern ACTION_PATTERN = Pattern.compile(""+ACTION+"[:：]\\s*\\[?(.+?)\\]?(?=\\n"+THINKING+"|\\n"+OBSERVATION+"|\\n"+ANSWER+"|\\n"+ASK+"|$)", Pattern.DOTALL);
-    private static final Pattern ASK_PATTERN = Pattern.compile(""+ASK+"[:：]\\s*(.+?)(?=\\n"+THINKING+"|\\n"+ACTION+"|\\n"+ANSWER+"|$)", Pattern.DOTALL);
-    // Only match tool calls with ACTION marker prefix, such as "ACTION: ToolName(parameters)"
-    private static final Pattern DIRECT_ACTION_PATTERN = Pattern.compile(""+ACTION+"[:：]\\s*([\\w.$]+\\([^)]*\\))", Pattern.DOTALL);
-    private static final Pattern ACTION_CALL_PATTERN = Pattern.compile("([\\w.$\\-\\u4e00-\\u9fa5]+)\\((.*)\\)", Pattern.DOTALL);
-    private static final Pattern ACTION_ALT_PATTERN = Pattern.compile("([\\w.$\\-\\u4e00-\\u9fa5]+)\\s*,\\s*(.+)", Pattern.DOTALL);
+    // 新的标签格式：支持 <TAG>content</TAG>
+    private static final Pattern TAG_PATTERN = Pattern.compile("<(THINK|ANSWER|ACTION|OBSERVE|DONE|ASK)>(.+?)</\\1>", Pattern.DOTALL);
 
     private final ToolRegistry toolRegistry;
     private final ToolInvoker toolInvoker;
@@ -288,7 +283,7 @@ public class ReActEngine {
             ThoughtAction parsed = parseThoughtActionObservation(content);
 
             // Check if it is an inquiry marker
-            if (parsed.getThought() != null && parsed.getThought().startsWith("ASK:")) {
+            if (parsed.getThought() != null && (parsed.getThought().startsWith("<ASK>") || parsed.getThought().contains("<ASK>"))) {
                 // This is an inquiry, return response directly and interrupt flow
                 saveSession(sessionId, session);
                 return response;
@@ -431,17 +426,27 @@ public class ReActEngine {
 
     /**
      * Normalize action key for comparison
+     * 只支持 JSON 格式：{"name": "ToolName", "arguments": {...}}
      */
     private String normalizeActionKey(String action) {
         if (action == null) {
             return "";
         }
-        // Extract tool name as key
-        Matcher matcher = ACTION_CALL_PATTERN.matcher(action);
-        if (matcher.find()) {
-            return matcher.group(1);
+        // 尝试解析 JSON 格式
+        String trimmedAction = action.trim();
+        if (trimmedAction.startsWith("{") && trimmedAction.endsWith("}")) {
+            try {
+                Map<String, Object> jsonAction = objectMapper.readValue(trimmedAction,
+                    new TypeReference<Map<String, Object>>() {});
+                Object nameObj = jsonAction.get("name");
+                if (nameObj != null) {
+                    return nameObj.toString();
+                }
+            } catch (Exception e) {
+                // JSON 解析失败，返回原值
+            }
         }
-        return action.split("\\(")[0].trim();
+        return trimmedAction;
     }
 
     /**
@@ -574,6 +579,9 @@ public class ReActEngine {
             private boolean isFirstLine = true;
             private StringBuilder lineBuffer = new StringBuilder();
             private Boolean isOutputting = false;
+            private String currentTagName = ""; // 当前标签名称（如 "THINK", "ACTION" 等）
+            private int currentActionOutputLength = 0; // 当前 ACTION 内容已输出的总长度
+            private long lastActionOutingTime = 0; // 上次 ACTION_OUTING 时间戳（毫秒）
 
             @Override
             public void onChunk(String content) {
@@ -581,124 +589,139 @@ public class ReActEngine {
                     return;
                 }
 
-                if(isFirstLine&&content.isBlank()){
-                    isFirstLine=false;
+                if(isFirstLine && content.isBlank()){
+                    isFirstLine = false;
                     return;
                 }
-                isFirstLine=false;
+                isFirstLine = false;
 
-                int start = 0;
-                // int length=content.trim().length();
-               
-                while (start < content.length()) {
-                    int end = content.indexOf('\n', start);
-                    if (end == -1) {
-                        end = content.length();
-                    }
-                    
-                    String line = content.substring(start, end);
-                    
-                    if(end + 1<= content.length()){
-                        handerLineContent(line+"\n",true);
-                        isOutputting=false;
-                    }
-                    else
-                        handerLineContent(line,false);
-                    // if(isOutputting){
-                    //     if (!settings.isShowToolDetails()&&currentType==ContentType.ACTION) {
-                    //     }
-                    //     else
-                    //         typedCallback.onTypedChunk(currentType, lineBuffer.toString());
-                    //     lineBuffer.setLength(0); // Clear buffer
-                    // }
-
-                    start = end + 1;
-
-                }
-
-                // // Split content by newlines for processing
-                // // int pos = 0;
-                // // while (pos < content.length()) {
-                //     int newlinePos = content.lastIndexOf('\n');
-
-                //     if (newlinePos == -1) {
-                //         lineBuffer.append(content);
-                //         int pos = lineBuffer.length();
-
-                //         if(pos>ANSWER.length() && lineBuffer.toString().startsWith(ANSWER+":")){
-                //             currentType = ContentType.ANSWER;
-                //             isOutputting = true;
-                //             lineBuffer.delete(0, ANSWER.length() + 1); // Delete "ANSWER:" prefix
-                //         }else if(pos>THINKING.length() && lineBuffer.toString().startsWith(THINKING+":")){
-                //             currentType = ContentType.THINKING;
-                //             isOutputting = true;
-                //             lineBuffer.delete(0, THINKING.length() + 1); // Delete "THINKING:" prefix
-                //         }else if(pos>ACTION.length() && lineBuffer.toString().startsWith(ACTION+":")){
-                //             currentType = ContentType.ACTION;
-                //             isOutputting = true;
-                //             lineBuffer.delete(0, ACTION.length() + 1); // Delete "ACTION:" prefix
-                //         }
-                //         else if(pos>6){
-                //             isOutputting = true;
-                //         }
-
-                //     } else {
-                //         // Found newline character
-                //         isOutputting = false;
-                //         String beforeNewline = content.substring(0, newlinePos);
-                //         typedCallback.onTypedChunk(currentType, beforeNewline+"\n");
-
-                //         lineBuffer.setLength(0); // Clear buffer
-                //                 lineBuffer.append(content.substring(newlinePos + 1));
-                //     }
-
-                //     if(isOutputting){
-                //          if (!settings.isShowToolDetails()&&currentType==ContentType.ACTION) {
-                //          }
-                //          else
-                //             typedCallback.onTypedChunk(currentType, lineBuffer.toString());
-                //         lineBuffer.setLength(0); // Clear buffer
-                //     }
-                // }
+                // 直接传递所有内容到滑动窗口处理器
+                handerLineContent(content);
             }
 
-            private void handerLineContent(String content, boolean needOutput) {
+
+            private void handerLineContent(String content) {
                 lineBuffer.append(content);
-                if (isOutputting) {
-                     if (!settings.isShowToolDetails() && currentType == ContentType.ACTION) {
-                    } else
-                        typedCallback.onTypedChunk(currentType, lineBuffer.toString());
-                    lineBuffer.setLength(0); // Clear buffer
-                    return;
+
+                // 如果已经在输出模式中，滑动窗口处理
+                while (lineBuffer.length() > 0) {
+                    String bufferStr = lineBuffer.toString();
+                    String bufferStrUpper = bufferStr.toUpperCase();
+
+                    // 检查是否到达结束标签（大小写不敏感）
+                    String endTagUpper = "</" + currentTagName + ">";
+                    int endTagIndex = bufferStrUpper.indexOf(endTagUpper);
+
+                    if (endTagIndex != -1) {
+                        // 找到结束标签，输出内容并结束输出模式
+                        String outputContent = bufferStr.substring(0, endTagIndex);
+                        if (!outputContent.isEmpty() )
+                            if(!(!settings.isShowToolDetails() && currentType == ContentType.ACTION)) {
+                                typedCallback.onTypedChunk(currentType, outputContent);
+                            if (currentType == ContentType.ACTION) {
+                                currentActionOutputLength += outputContent.length();
+                                typedCallback.onTypedChunk(ContentType.ACTION_OUTING, String.valueOf(currentActionOutputLength));
+                            }
+                            // 如果是 ACTION 类型，更新长度并发送 ACTION_OUTING
+                        }
+
+                        // 删除处理过的内容（包括结束标签）
+                        lineBuffer.delete(0, endTagIndex + endTagUpper.length());
+                        isOutputting = false;
+                        // 继续处理剩余内容，可能还有新的标签
+                        continue;
+                    }
+
+                    // 未找到结束标签，检查是否需要输出部分内容
+                    int lastOpenBracket = bufferStr.lastIndexOf('<');
+                    if (lastOpenBracket > 0) {
+                        // 输出 "<" 之前的内容，保留可能的标签前缀
+                        String outputContent = bufferStr.substring(0, lastOpenBracket);
+                        if (!outputContent.isEmpty()) {
+                            if(!(!settings.isShowToolDetails() && currentType == ContentType.ACTION))
+                                typedCallback.onTypedChunk(currentType, outputContent);
+                            // 如果是 ACTION 类型，更新长度并发送 ACTION_OUTING
+                            if (currentType == ContentType.ACTION&&(System.currentTimeMillis() - lastActionOutingTime) >= 1000) {
+                                currentActionOutputLength += outputContent.length();
+                                typedCallback.onTypedChunk(ContentType.ACTION_OUTING, String.valueOf(currentActionOutputLength));
+                                lastActionOutingTime = System.currentTimeMillis();
+                            }
+                        }
+                        lineBuffer.delete(0, lastOpenBracket);
+                        break;
+                    } else if (lastOpenBracket == 0) {
+                        // 整个内容可能是标签的一部分，保留在缓冲区
+                        break;
+                    } else {
+                        // 没有标签符号，全部输出
+                        if (!bufferStr.isEmpty()) {
+                            if(!(!settings.isShowToolDetails() && currentType == ContentType.ACTION))
+                                typedCallback.onTypedChunk(currentType, bufferStr);
+                            // 如果是 ACTION 类型，更新长度并发送 ACTION_OUTING,吗，至少间隔1秒输出，避免输出过快
+                            if (currentType == ContentType.ACTION&&(System.currentTimeMillis() - lastActionOutingTime) >= 1000) {
+                                currentActionOutputLength += bufferStr.length();
+                                typedCallback.onTypedChunk(ContentType.ACTION_OUTING, String.valueOf(currentActionOutputLength));
+                                lastActionOutingTime = System.currentTimeMillis();
+                            }
+                        }
+                        lineBuffer.setLength(0);
+                    }
+                    break;
                 }
 
-                int pos = lineBuffer.length();
+                // 如果不在输出模式，尝试检测开始标签
+                if (!isOutputting && lineBuffer.length() > 0) {
+                    String bufferStr = lineBuffer.toString();
+                    String bufferStrUpper = bufferStr.toUpperCase();
 
-                if (pos > ASK.length() && lineBuffer.toString().startsWith(ASK + ":")) {
-                    currentType = ContentType.ASK;
-                    isOutputting = true;
-                    lineBuffer.delete(0, ASK.length() + 1); // Delete "ASK:" prefix
-                } else if (pos > ANSWER.length() && lineBuffer.toString().startsWith(ANSWER + ":")) {
-                    currentType = ContentType.ANSWER;
-                    isOutputting = true;
-                    lineBuffer.delete(0, ANSWER.length() + 1); // Delete "ANSWER:" prefix
-                } else if (pos > THINKING.length() && lineBuffer.toString().startsWith(THINKING + ":")) {
-                    currentType = ContentType.THINKING;
-                    isOutputting = true;
-                    lineBuffer.delete(0, THINKING.length() + 1); // Delete "THINKING:" prefix
-                } else if (pos > ACTION.length() && lineBuffer.toString().startsWith(ACTION + ":")) {
-                    currentType = ContentType.ACTION;
-                    isOutputting = true;
-                    lineBuffer.delete(0, ACTION.length() + 1); // Delete "ACTION:" prefix
-                } else if (pos > 6) {
-                    isOutputting = true;
-                }
+                    // 检测各种开始标签（大小写不敏感）
+                    ContentType detectedType = null;
+                    int tagIndex = 0;
+                    int tagLength = 0;
 
-                if (isOutputting || needOutput) {
-                    if (!settings.isShowToolDetails() && currentType == ContentType.ACTION) {
-                    } else
-                        typedCallback.onTypedChunk(currentType, lineBuffer.toString());
-                    lineBuffer.setLength(0); // Clear buffer
+                    if (bufferStrUpper.contains("<THINK>")) {
+                        detectedType = ContentType.THINKING;
+                        currentTagName = "THINK";
+                        tagIndex = bufferStrUpper.indexOf("<THINK>");
+                        tagLength = 7;
+                    } else if (bufferStrUpper.contains("<ACTION>")) {
+                        detectedType = ContentType.ACTION;
+                        currentTagName = "ACTION";
+                        tagIndex = bufferStrUpper.indexOf("<ACTION>");
+                        tagLength = 8;
+                        // 重置 ACTION 输出长度计数器
+                        currentActionOutputLength = 0;
+                        // Send ACTION_OUTING to show loading animation while AI is generating action content
+                        typedCallback.onTypedChunk(ContentType.ACTION_OUTING, "0");
+                    } else if (bufferStrUpper.contains("<ASK>")) {
+                        detectedType = ContentType.ASK;
+                        currentTagName = "ASK";
+                        tagIndex = bufferStrUpper.indexOf("<ASK>");
+                        tagLength = 5;
+                    } else if (bufferStrUpper.contains("<ANSWER>")) {
+                        detectedType = ContentType.ANSWER;
+                        currentTagName = "ANSWER";
+                        tagIndex = bufferStrUpper.indexOf("<ANSWER>");
+                        tagLength = 8;
+                    } else if (bufferStrUpper.contains("<REASONING>")) {
+                        detectedType = ContentType.REASONING;
+                        currentTagName = "REASONING";
+                        tagIndex = bufferStrUpper.indexOf("<REASONING>");
+                        tagLength = 11;
+                    }
+
+                    if (detectedType != null) {
+                        currentType = detectedType;
+                        isOutputting = true;
+
+                        // 删除标签之前的内容和标签本身（使用精确的标签索引）
+                        lineBuffer.delete(0, tagIndex + tagLength);
+
+                        // 递归处理缓冲区剩余内容
+                        if (lineBuffer.length() > 0) {
+                            handerLineContent("");
+                        }
+                    }
                 }
             }
 
@@ -745,8 +768,14 @@ public class ReActEngine {
         String name = function.getName();
 
         // Send tool execution start notification (for frontend timer display)
+        // Include description if provided
         if (typedCallback != null) {
-            typedCallback.onTypedChunk(ContentType.ACTION_START, i18nService.get("react.action_start"));
+            String actionDesc = function.getDescription();
+            if (actionDesc != null && !actionDesc.isBlank()) {
+                typedCallback.onTypedChunk(ContentType.ACTION_START, actionDesc);
+            } else {
+                typedCallback.onTypedChunk(ContentType.ACTION_START, i18nService.get("react.action_start"));
+            }
         }
 
         // Special handling: tool detail query
@@ -838,14 +867,20 @@ public class ReActEngine {
                                           ChatCompletionRequest request, TypedStreamCallback typedCallback) {
         ActionCall actionCall = parseActionCall(actionText);
         if (actionCall == null) {
-            return "❌ " + i18nService.get("react.tool_call_failed") + ": Unable to parse action: " + actionText + ". Correct format: ToolName(\"param1\", \"param2\")";
+            return "❌ " + i18nService.get("react.tool_call_failed") + ": Unable to parse action: " + actionText + ". Correct format: {\"name\": \"ToolName\", \"arguments\": {\"param1\": \"value1\"}}";
         }
 
         String toolName = actionCall.getToolName();
 
         // Send tool execution start notification (for frontend timer display)
+        // Use description if provided by AI
         if (typedCallback != null) {
-            typedCallback.onTypedChunk(ContentType.ACTION_START, i18nService.get("react.action_start"));
+            String actionDesc = actionCall.getDescription();
+            if (actionDesc != null && !actionDesc.isBlank()) {
+                typedCallback.onTypedChunk(ContentType.ACTION_START, actionDesc);
+            } else {
+                typedCallback.onTypedChunk(ContentType.ACTION_START, i18nService.get("react.action_start"));
+            }
         }
 
         // Special handling: tool detail query
@@ -1139,7 +1174,16 @@ public class ReActEngine {
             return "Tool name is empty";
         }
         Object first = args.get(0);
-        String toolName = first == null ? null : first.toString();
+        String toolName;
+
+        // JSON 格式的参数会解析为 Map 对象
+        if (first instanceof Map) {
+            Object nameValue = ((Map<?, ?>) first).get("name");
+            toolName = nameValue == null ? null : nameValue.toString();
+        } else {
+            toolName = first == null ? null : first.toString();
+        }
+
         if (toolName == null || toolName.isBlank()) {
             return "Tool name is empty";
         }
@@ -1324,7 +1368,7 @@ public class ReActEngine {
 
     /**
      * Parse thought and action segments in model output.
-     * Supports multiple formats to improve parsing success rate.
+     * 只支持新格式 <TAG>content</TAG>
      */
     private ThoughtAction parseThoughtActionObservation(String text) {
         if (text == null || text.isBlank()) {
@@ -1333,93 +1377,39 @@ public class ReActEngine {
 
         String normalizedText = text.replaceAll("\\r\\n", "\n").trim();
 
-        // First check if ASK marker is present
-        Matcher askMatch = ASK_PATTERN.matcher(normalizedText);
-        if (askMatch.find()) {
-            String askContent = askMatch.group(1).trim();
-            // Return a special thought content, marked as inquiry
-            return new ThoughtAction("ASK:" + askContent, null);
+        // 只检查新格式 <TAG>content</TAG>
+        Map<String, String> tagContents = new LinkedHashMap<>();
+        Matcher tagMatcher = TAG_PATTERN.matcher(normalizedText);
+        while (tagMatcher.find()) {
+            String tag = tagMatcher.group(1);
+            String content = tagMatcher.group(2).trim();
+            tagContents.put(tag, content);
         }
 
-        // Try to match complete thought-action format
-        Matcher thoughtMatch = THOUGHT_PATTERN.matcher(normalizedText);
-        Matcher actionMatch = ACTION_PATTERN.matcher(normalizedText);
+        // 如果找到新格式标签，进行解析
+        if (!tagContents.isEmpty()) {
+            String thought = tagContents.get("THINK");
+            String action = tagContents.get("ACTION");
+            String ask = tagContents.get("ASK");
 
-        String thought = null;
-        String action = null;
-
-        if (thoughtMatch.find()) {
-            thought = thoughtMatch.group(1).trim();
-        }
-
-        if (actionMatch.find()) {
-            action = actionMatch.group(1).trim().replaceAll("^\\[|\\]$", "");
-        }
-
-        // Both markers exist, return result
-        if (thought != null && action != null) {
-            return new ThoughtAction(thought, action);
-        }
-
-        // Only thought, no action
-        if (thought != null && action == null) {
-            // Try to find action after thought
-            int thoughtEnd = thoughtMatch.end();
-            if (thoughtEnd < normalizedText.length()) {
-                String afterThought = normalizedText.substring(thoughtEnd).trim();
-                // Check if there's ACTION marker
-                if (afterThought.startsWith(ACTION) || afterThought.startsWith(ACTION + ":")) {
-                    int colonIndex = afterThought.indexOf(':');
-                    if (colonIndex >= 0) {
-                        action = afterThought.substring(colonIndex + 1).trim()
-                            .replaceAll("^\\[|\\]$", "");
-                    }
-                }
+            // ASK 标记特殊处理
+            if (ask != null) {
+                return new ThoughtAction("<ASK>" + ask + "</ASK>", null);
             }
-            // If still no action, return result with only thought
-            return new ThoughtAction(thought, action);
-        }
 
-        // Only action, no thought
-        if (thought == null && action != null) {
-            // Try to find thought before action
-            int actionStart = actionMatch.start();
-            if (actionStart > 0) {
-                String beforeAction = normalizedText.substring(0, actionStart).trim();
-                // Check if there's THINK marker
-                if (beforeAction.endsWith(THINKING) || beforeAction.endsWith(THINKING + ":")) {
-                    int lastNewline = beforeAction.lastIndexOf('\n');
-                    if (lastNewline >= 0) {
-                        thought = beforeAction.substring(lastNewline + 1).trim();
-                    } else {
-                        thought = beforeAction;
-                    }
-                    int colonIndex = thought.indexOf(':');
-                    if (colonIndex >= 0) {
-                        thought = thought.substring(colonIndex + 1).trim();
-                    }
-                }
+            // 如果有 THINK 和 ACTION
+            if (thought != null || action != null) {
+                return new ThoughtAction(thought, action);
             }
-            if (thought == null) {
-                thought = "Execute operation";
-            }
-            return new ThoughtAction(thought, action);
-        }
 
-        // Fallback: directly match tool call format (must have ACTION: marker prefix)
-        Matcher directMatch = DIRECT_ACTION_PATTERN.matcher(normalizedText);
-        if (directMatch.find()) {
-            // group(0) is complete match "ACTION: ToolName(Parameters)", group(1) is tool call part
-            String fullMatch = directMatch.group(0);
-            String toolCall = directMatch.group(1);
-            thought = extractThoughtFromContext(normalizedText, fullMatch);
-            action = toolCall;
-            return new ThoughtAction(thought, action);
+            // 如果只有其他标签但没有 THINK 和 ACTION
+            if (!tagContents.isEmpty()) {
+                return new ThoughtAction(null, null);
+            }
         }
 
         // Final fallback: entire text as thought
-        thought = normalizedText;
-        return new ThoughtAction(thought, null);
+        return new ThoughtAction(normalizedText, null);
     }
 
     /**
@@ -1452,139 +1442,60 @@ public class ReActEngine {
 
     /**
      * Parse tool name and parameter string in action.
+     * 只支持 JSON 格式：{"name": "ToolName", "arguments": {...}}
      */
     private ActionCall parseActionCall(String actionText) {
-        Matcher match = ACTION_CALL_PATTERN.matcher(actionText);
-        if (!match.find()) {
-            Matcher alt = ACTION_ALT_PATTERN.matcher(actionText);
-            if (alt.find()) {
-                String toolName = alt.group(1);
-                String args = alt.group(2);
-                return new ActionCall(toolName, args, parseActionArgs(args));
+        String trimmedText = actionText.trim();
+
+        // 只支持 JSON 格式：{"name": "ToolName", "arguments": {...}, "description": "..."}
+        if (trimmedText.startsWith("{") && trimmedText.endsWith("}")) {
+            try {
+                Map<String, Object> jsonAction = objectMapper.readValue(trimmedText,
+                    new TypeReference<Map<String, Object>>() {});
+                Object nameObj = jsonAction.get("name");
+                Object argsObj = jsonAction.get("arguments");
+                Object descObj = jsonAction.get("description");
+
+                if (nameObj != null) {
+                    String toolName = nameObj.toString();
+                    String argsJson = argsObj != null ? objectMapper.writeValueAsString(argsObj) : "{}";
+                    String description = descObj != null ? descObj.toString() : "";
+                    return new ActionCall(toolName, argsJson, parseJsonArguments(argsObj), description);
+                }
+            } catch (Exception e) {
+                return null;
             }
-            return null;
         }
-        String toolName = match.group(1);
-        String args = match.group(2);
-        return new ActionCall(toolName, args, parseActionArgs(args));
+        return null;
     }
 
     /**
-     * Parse action parameters, prioritize JSON array parsing, fallback to relaxed split rules.
+     * 解析 JSON 格式的参数
      */
-    private List<Object> parseActionArgs(String argsStr) {
-        if (argsStr == null || argsStr.isBlank()) {
-            return List.of();
+    private List<Object> parseJsonArguments(Object argsObj) {
+        List<Object> result = new ArrayList<>();
+        if (argsObj instanceof Map) {
+            // 直接返回 Map 对象，convertActionArgsToMap 会处理它
+            result.add(argsObj);
+        } else if (argsObj instanceof List) {
+            return (List<Object>) argsObj;
         }
-        String trimmedArgs = argsStr.trim();
-        try {
-            return objectMapper.readValue("[" + trimmedArgs + "]", new TypeReference<List<Object>>() {
-            });
-        } catch (Exception ignore) {
-        }
-
-        List<String> parts = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean inQuotes = false;
-        char quoteChar = 0;
-        int depth = 0;
-
-        for (int i = 0; i < trimmedArgs.length(); i++) {
-            char ch = trimmedArgs.charAt(i);
-            if ((ch == '\"' || ch == '\'') && (i == 0 || trimmedArgs.charAt(i - 1) != '\\')) {
-                if (!inQuotes) {
-                    inQuotes = true;
-                    quoteChar = ch;
-                } else if (ch == quoteChar) {
-                    inQuotes = false;
-                    quoteChar = 0;
-                }
-                current.append(ch);
-            } else if (ch == '(' || ch == '[' || ch == '{') {
-                depth++;
-                current.append(ch);
-            } else if (ch == ')' || ch == ']' || ch == '}') {
-                depth--;
-                current.append(ch);
-            } else if (ch == ',' && !inQuotes && depth == 0) {
-                String piece = current.toString().trim();
-                if (!piece.isEmpty()) {
-                    parts.add(piece);
-                }
-                current = new StringBuilder();
-            } else {
-                current.append(ch);
-            }
-        }
-
-        String piece = current.toString().trim();
-        if (!piece.isEmpty()) {
-            parts.add(piece);
-        }
-
-        List<Object> parsed = new ArrayList<>();
-        for (String part : parts) {
-            parsed.add(parsePrimitive(part));
-        }
-        return parsed;
-    }
-
-    /**
-     * Parse basic type parameters, supports string/number/boolean/null.
-     */
-    private Object parsePrimitive(String part) {
-        if (part == null) {
-            return null;
-        }
-        String value = part.trim();
-        if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
-            return value.substring(1, value.length() - 1);
-        }
-        String lower = value.toLowerCase(Locale.ROOT);
-        if ("true".equals(lower)) {
-            return true;
-        }
-        if ("false".equals(lower)) {
-            return false;
-        }
-        if ("null".equals(lower)) {
-            return null;
-        }
-        if (value.matches("-?\\d+")) {
-            try {
-                return Long.parseLong(value);
-            } catch (NumberFormatException ex) {
-                return value;
-            }
-        }
-        if (value.matches("-?\\d+\\.\\d+")) {
-            try {
-                return Double.parseDouble(value);
-            } catch (NumberFormatException ex) {
-                return value;
-            }
-        }
-        return value;
+        return result;
     }
 
     /**
      * Check if output contains final answer marker.
-     * Improvement: only check markers at line start to avoid false positives in normal text
+     * 只支持新格式 <TAG>content</TAG>
      */
     private boolean isFinalAnswer(String content) {
         if (content == null || content.isEmpty()) {
             return false;
         }
 
-        // Check by line, only match markers at line start (allowing spaces at line start)
-        String[] lines = content.split("\\n");
-        for (String line : lines) {
-            String trimmedLine = line.trim();
-            for (String marker : COMPLETION_MARKERS) {
-                // Check if starts with marker (after removing leading/trailing spaces)
-                if (trimmedLine.startsWith(marker)) {
-                    return true;
-                }
+        // 只检查新格式 <TAG>content</TAG>
+        for (String marker : COMPLETION_MARKERS) {
+            if (content.contains("<" + marker + ">")) {
+                return true;
             }
         }
         return false;
@@ -1599,15 +1510,10 @@ public class ReActEngine {
             return false;
         }
 
-        // Check by line, only match markers at line start (allowing spaces at line start)
-        String[] lines = content.split("\\n");
-        for (String line : lines) {
-            String trimmedLine = line.trim();
-            for (String marker : INTERUPTION_MARKERS) {
-                // Check if starts with marker (after removing leading/trailing spaces)
-                if (trimmedLine.startsWith(marker)) {
-                    return true;
-                }
+        // 只检查新格式 <TAG>content</TAG>
+        for (String marker : INTERUPTION_MARKERS) {
+            if (content.contains("<" + marker + ">")) {
+                return true;
             }
         }
         return false;
@@ -1784,7 +1690,14 @@ public class ReActEngine {
                 // Only add examples for backend tools (frontend tools are not registered in ToolRegistry)
                 Optional<ToolDetail> detail = toolRegistry.getDetail(name);
                 if (detail.isPresent() && detail.get().getRequestExample() != null) {
-                    target.append("\n  Example: ").append(detail.get().getRequestExample());
+                    try {
+                        // 生成 JSON 格式的完整工具调用示例
+                        String jsonExample = ExampleGenerator.buildToolCallExample(name,
+                            objectMapper.readValue(detail.get().getRequestExample(), Map.class));
+                        target.append("\n  Example: ").append(jsonExample);
+                    } catch (Exception e) {
+                        // 忽略示例生成失败
+                    }
                 }
             }
             target.append("\n");
@@ -1826,35 +1739,46 @@ public class ReActEngine {
             ## Workflow
 
             ### Step 1: Determine Question Type
-            - **Simple questions** (greetings, casual chat, general knowledge, calculations, etc.): Answer directly without tools, output `ANSWER: [direct answer]`
+            - **Simple questions** (greetings, casual chat, general knowledge, calculations, etc.): Answer directly without tools, output `<ANSWER>direct answer</ANSWER>`
             - **Complex questions** (requiring data lookup, operations, external information, etc.): Use tools
             - **Insufficient information** (need user to provide more details): Ask the user
 
             ### Step 2: Tool Invocation Format
-            If tools are needed, output in the following format, each part must be on a separate line:
+            If tools are needed, output in the following format:
 
             ```
-            THINK: [Analyze the problem, determine which tool to use]
-            ACTION: ToolFullName("param1", "param2", ...)
+            <THINK>Analyze the problem, determine which tool to use</THINK>
+            <ACTION>
+            {
+              "name": "ToolFullName",
+              "description": "Briefly describe the action being performed (e.g., 'Create new user', 'To check disk usage: df -h', 'Read the content of the file xxx.java')",
+              "arguments": {
+                "param1": "value1",
+                "param2": "value2"
+              }
+            }
+            </ACTION>
             ```
+
+            **Note**: The `description` field is optional but recommended. It will be displayed in the UI to show what action is being executed (e.g., "Create new user", "Query order details", "Update salary").
 
             ### Step 3: After Getting Results
-            - If the problem is solved: Output `ANSWER: [final answer]`
+            - If the problem is solved: Output `<ANSWER>final answer</ANSWER>`
             - If more information is needed: Continue calling tools
-            - If user input is required: Output `ASK: [your question]`
+            - If user input is required: Output `<ASK>your question</ASK>`
 
             ## Tool Invocation Rules
-            1. Use complete tool names (including class prefix)
-            2. String parameters in double quotes: `"text"`
-            3. Numbers written directly: `123`, `45.67`
-            4. Boolean values: `true`, `false`
-            5. Complex objects: Pass object content directly, no wrapping
-               - Correct: `DemoTools.batchUpdateSalary({"updates":[...],"reason":"..."})`
-               - Incorrect: `DemoTools.batchUpdateSalary({"batchRequest":{...}})`
-            6. Call only one tool at a time
+            1. Use complete tool names (including class prefix) in the `name` field
+            2. Pass all parameters in the `arguments` object as key-value pairs
+            3. String values in JSON format must be in double quotes: `"text"`
+            4. Numbers written directly: `123`, `45.67`
+            5. Boolean values: `true`, `false`
+            6. Complex objects: Use JSON object format
+               - Correct: `{"updates":[...],"reason":"..."}`
+            7. When reading files or searching records, it is necessary to consider the possibility of excessively large files or an excessive number of records. When the tool supports it, batch reading can be considered.
 
             ## User Interaction Rules
-            Use the `ASK:` marker to ask the user when:
+            Use the `<ASK>content</ASK>` marker to ask the user when:
             1. The user's question is unclear or missing necessary parameters
             2. User needs to make a choice (e.g., multiple matching options)
             3. **Mandatory confirmation for sensitive operations**:
@@ -1862,10 +1786,10 @@ public class ReActEngine {
                - Modifying important data (configurations, critical data, etc.)
                - Executing irreversible operations (clearing data, overwriting files, etc.)
                **Confirmation format**: First describe the operation, then ask "Confirm to execute?"
-               Example: `ASK: You are about to delete file /path/to/file. This operation cannot be undone. Confirm to execute?`
+               Example: `<ASK>You are about to delete file /path/to/file. This operation cannot be undone. Confirm to execute?</ASK>`
             4. Tool execution failed and requires additional user information
 
-            Format: `ASK: [your question]`
+            Format: `<ASK>your question</ASK>`
 
             ## Common Issue Handling
             - **Tool call failed**: Check error message, adjust parameters and retry
@@ -1874,14 +1798,14 @@ public class ReActEngine {
 
             ## ⚠️ Format Enforcement
             - Must strictly follow the above format, do not use other formats
-            - Parameters must use function call format, do not use XML or other formats (e.g., `<argkey>` or `<parameter>` tags)
-            - ACTION line must be complete, tool name and parameters on the same line
+            - ACTION must be in JSON format with `name` and `arguments` fields
+            - Parameters must use JSON format, do not use function call format or XML tags
 
             ## Notes
             - Keep thinking concise, focus on next action
             - Do not repeat failed attempts
-            - Must output `ANSWER:` marker on the last line when task is completed
-            - Use `ASK:` marker when user input is needed, the process will interrupt and wait for user response
+            - Must output `<ANSWER>answer</ANSWER>` marker on the last line when task is completed
+            - Use `<ASK>question</ASK>` marker when user input is needed, the process will interrupt and wait for user response
             - **Avoid translation of names or department names**: Output them as they are, without translation, to avoid confusion.
 
 
@@ -2317,8 +2241,6 @@ public class ReActEngine {
         Map<String, Object> prop = new LinkedHashMap<>();
         String jsonType = mapJsonType(param.getType());
 
-        System.err.println("DEBUG buildPropertySchema START: paramType=" + param.getType() + ", jsonType=" + jsonType);
-
         prop.put("type", jsonType);
 
         // Add parameter source information (for REST API tools)
@@ -2354,19 +2276,13 @@ public class ReActEngine {
         boolean hasList = param.getType().contains("List");
         boolean shouldExpand = isObject && !hasMap && !hasList;
 
-        System.err.println("DEBUG buildPropertySchema: isObject=" + isObject + ", hasMap=" + hasMap + ", hasList=" + hasList + ", shouldExpand=" + shouldExpand);
-
         if (shouldExpand) {
             try {
                 // Try to load class and parse its fields
                 Class<?> paramClass = loadClassFromTypeName(param.getType());
 
-                System.out.println("DEBUG buildPropertySchema: paramType=" + param.getType() + ", jsonType=" + jsonType + ", loadedClass=" + (paramClass != null ? paramClass.getName() : "null"));
-
                 if (paramClass != null) {
                     Map<String, Object> objectProperties = buildObjectProperties(paramClass);
-                    System.out.println("DEBUG buildPropertySchema: objectProperties.size=" + objectProperties.size() + ", keys=" + objectProperties.keySet());
-
                     if (!objectProperties.isEmpty()) {
                         prop.put("properties", objectProperties);
                         // Generate example from expanded properties (instead of using ExampleGenerator)
@@ -2754,11 +2670,13 @@ public class ReActEngine {
         private final String toolName;
         private final String rawArgs;
         private final List<Object> args;
+        private final String description;
 
-        private ActionCall(String toolName, String rawArgs, List<Object> args) {
+        private ActionCall(String toolName, String rawArgs, List<Object> args, String description) {
             this.toolName = toolName;
             this.rawArgs = rawArgs;
             this.args = args;
+            this.description = description;
         }
 
         public String getToolName() {
@@ -2771,6 +2689,10 @@ public class ReActEngine {
 
         public List<Object> getArgs() {
             return args;
+        }
+
+        public String getDescription() {
+            return description;
         }
     }
 

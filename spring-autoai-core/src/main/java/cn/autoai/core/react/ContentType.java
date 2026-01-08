@@ -20,6 +20,11 @@ public enum ContentType {
     ACTION("Action"),
 
     /**
+     * Action outputting - Notification when action is being output (AI is generating action content)
+     */
+    ACTION_OUTING("Action Outing"),
+
+    /**
      * Action start - Notification when tool starts execution
      */
     ACTION_START("Action Start"),

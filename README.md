@@ -798,7 +798,7 @@ The framework includes the following common tools, no need to redefine:
 ```javascript
 // AI can directly call these tools
 User: Help me save the username to localStorage
-AI: ACTION: setLocalStorage({"key":"username","value":"Zhang San"})
+AI: <ACTION>{"name": "setLocalStorage", "arguments": {"key": "username", "value": "Zhang San"}}</ACTION>
 → {success: true, message: "Saved: username = Zhang San"}
 ```
 
@@ -818,7 +818,7 @@ AI: ACTION: setLocalStorage({"key":"username","value":"Zhang San"})
 **Example:**
 ```javascript
 User: Tell me the information of the current page
-AI: ACTION: getPageInfo()
+AI: <ACTION>{"name": "getPageInfo", "arguments": {}}</ACTION>
 → {
   title: "My Application",
   url: "https://example.com/page",

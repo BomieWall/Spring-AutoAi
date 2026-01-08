@@ -1180,4 +1180,412 @@ public class DemoTools {
         Employee emp = employees.get(name);
         return emp != null ? emp.department : "Unknown department";
     }
+
+    // ========== Complex Parameter Tools ==========
+
+    /**
+     * 处理企业采购订单（复杂参数示例）
+     * 包含嵌套对象、列表、Map、枚举等多种数据类型
+     */
+    @AutoAiTool(description = "处理企业采购订单，支持多种复杂参数类型：嵌套对象、列表、Map、枚举等")
+    public PurchaseOrderResult processPurchaseOrder(PurchaseOrderRequest request) {
+        if (request == null) {
+            return new PurchaseOrderResult(false, "采购订单信息不能为空", null);
+        }
+
+        if (request.orderId == null || request.orderId.trim().isEmpty()) {
+            return new PurchaseOrderResult(false, "订单号不能为空", null);
+        }
+
+        if (request.supplier == null || request.supplier.name == null) {
+            return new PurchaseOrderResult(false, "供应商信息不能为空", null);
+        }
+
+        // 计算订单总金额
+        double totalAmount = 0.0;
+        if (request.items != null) {
+            for (OrderItem item : request.items) {
+                totalAmount += item.price * item.quantity;
+            }
+        }
+
+        // 处理附加费用
+        if (request.additionalFees != null) {
+            for (String feeType : request.additionalFees.keySet()) {
+                totalAmount += request.additionalFees.get(feeType);
+            }
+        }
+
+        // 构建订单摘要
+        PurchaseOrderSummary summary = new PurchaseOrderSummary();
+        summary.orderId = request.orderId;
+        summary.totalAmount = totalAmount;
+        summary.itemCount = request.items != null ? request.items.size() : 0;
+        summary.supplier = request.supplier.name;
+        summary.status = request.status != null ? request.status : OrderStatus.PENDING;
+        summary.priority = request.priority;
+        summary.paymentMethod = request.paymentMethod;
+        summary.deliveryAddress = request.deliveryAddress != null ? request.deliveryAddress.getFullAddress() : "";
+        summary.requestedBy = request.requestedBy;
+        summary.approvedBy = request.approvedBy;
+        summary.items = request.items;
+        summary.customFields = request.customFields;
+        summary.notes = request.notes;
+        summary.createdAt = System.currentTimeMillis();
+
+        return new PurchaseOrderResult(true, "采购订单处理成功", summary);
+    }
+
+    /**
+     * 分析员工绩效（复杂参数示例）
+     * 包含多个嵌套对象、列表、Map、时间范围等
+     */
+    @AutoAiTool(description = "分析员工绩效，支持多维度的绩效指标和自定义配置")
+    public PerformanceAnalysisResult analyzeEmployeePerformance(PerformanceAnalysisRequest request) {
+        if (request == null) {
+            return new PerformanceAnalysisResult(false, "绩效分析请求不能为空", null);
+        }
+
+        if (request.employeeName == null || request.employeeName.trim().isEmpty()) {
+            return new PerformanceAnalysisResult(false, "员工姓名不能为空", null);
+        }
+
+        // 查询员工信息
+        Employee emp = employees.get(request.employeeName);
+        if (emp == null) {
+            return new PerformanceAnalysisResult(false, "员工不存在: " + request.employeeName, null);
+        }
+
+        // 计算绩效得分
+        double totalScore = 0.0;
+        int metricCount = 0;
+
+        if (request.metrics != null) {
+            for (PerformanceMetric metric : request.metrics) {
+                totalScore += metric.score * metric.weight;
+                metricCount += metric.weight;
+            }
+        }
+
+        double averageScore = metricCount > 0 ? totalScore / metricCount : 0.0;
+
+        // 构建分析结果
+        PerformanceReport report = new PerformanceReport();
+        report.employeeName = request.employeeName;
+        report.department = emp.department;
+        report.position = emp.position;
+        report.period = request.period != null ? request.period : "月度";
+        report.startDate = request.startDate;
+        report.endDate = request.endDate;
+        report.averageScore = averageScore;
+        report.metrics = request.metrics;
+        report.goals = request.goals;
+        report.achievements = request.achievements;
+        report.recommendations = request.recommendations;
+        report.customAttributes = request.customAttributes;
+        report.analysisDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+
+        return new PerformanceAnalysisResult(true, "绩效分析完成", report);
+    }
+
+    // ========== 复杂参数内部类 ==========
+
+    /** 采购订单状态 */
+    public enum OrderStatus {
+        PENDING("待处理"),
+        APPROVED("已审批"),
+        REJECTED("已拒绝"),
+        PROCESSING("处理中"),
+        COMPLETED("已完成"),
+        CANCELLED("已取消");
+
+        private final String description;
+
+        OrderStatus(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    /** 支付方式 */
+    public enum PaymentMethod {
+        CASH("现金"),
+        BANK_TRANSFER("银行转账"),
+        CREDIT_CARD("信用卡"),
+        ALIPAY("支付宝"),
+        WECHAT_PAY("微信支付"),
+        CHECK("支票");
+
+        private final String description;
+
+        PaymentMethod(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    /** 优先级 */
+    public enum Priority {
+        LOW("低"),
+        MEDIUM("中"),
+        HIGH("高"),
+        URGENT("紧急");
+
+        private final String description;
+
+        Priority(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
+
+    /** 供应商信息 */
+    public static class Supplier {
+        @AutoAiField(description = "供应商名称", required = true, example = "北京科技发展有限公司")
+        public String name;
+
+        @AutoAiField(description = "供应商编号", required = true, example = "SUP001")
+        public String code;
+
+        @AutoAiField(description = "联系人姓名", required = true, example = "张经理")
+        public String contactPerson;
+
+        @AutoAiField(description = "联系电话", required = true, example = "13800138000")
+        public String phone;
+
+        @AutoAiField(description = "邮箱地址", required = false, example = "contact@example.com")
+        public String email;
+
+        @AutoAiField(description = "供应商地址", required = false)
+        public Address address;
+
+        @AutoAiField(description = "信用等级", required = false, example = "AAA")
+        public String creditLevel;
+    }
+
+    /** 地址信息 */
+    public static class Address {
+        @AutoAiField(description = "国家", required = false, example = "中国")
+        public String country;
+
+        @AutoAiField(description = "省份", required = false, example = "北京市")
+        public String province;
+
+        @AutoAiField(description = "城市", required = false, example = "北京市")
+        public String city;
+
+        @AutoAiField(description = "区县", required = false, example = "朝阳区")
+        public String district;
+
+        @AutoAiField(description = "街道地址", required = false, example = "建国路88号")
+        public String street;
+
+        @AutoAiField(description = "邮政编码", required = false, example = "100000")
+        public String postalCode;
+
+        public String getFullAddress() {
+            StringBuilder sb = new StringBuilder();
+            if (country != null) sb.append(country);
+            if (province != null) sb.append(province);
+            if (city != null) sb.append(city);
+            if (district != null) sb.append(district);
+            if (street != null) sb.append(street);
+            if (postalCode != null) sb.append(" (").append(postalCode).append(")");
+            return sb.toString();
+        }
+    }
+
+    /** 订单项 */
+    public static class OrderItem {
+        @AutoAiField(description = "商品名称", required = true, example = "笔记本电脑")
+        public String productName;
+
+        @AutoAiField(description = "商品编号", required = true, example = "SKU001")
+        public String productCode;
+
+        @AutoAiField(description = "规格型号", required = false, example = "ThinkPad X1")
+        public String specification;
+
+        @AutoAiField(description = "单价", required = true, example = "8999.00")
+        public double price;
+
+        @AutoAiField(description = "数量", required = true, example = "10")
+        public int quantity;
+
+        @AutoAiField(description = "单位", required = true, example = "台")
+        public String unit;
+
+        @AutoAiField(description = "备注", required = false, example = "需要预装软件")
+        public String remarks;
+
+        @AutoAiField(description = "自定义属性", required = false)
+        public Map<String, String> customAttributes;
+    }
+
+    /** 采购订单请求 */
+    public static class PurchaseOrderRequest {
+        @AutoAiField(description = "订单号", required = true, example = "PO20240107001")
+        public String orderId;
+
+        @AutoAiField(description = "供应商信息", required = true)
+        public Supplier supplier;
+
+        @AutoAiField(description = "订单项列表", required = true)
+        public List<OrderItem> items;
+
+        @AutoAiField(description = "订单状态", required = false, example = "PENDING")
+        public OrderStatus status;
+
+        @AutoAiField(description = "优先级", required = false, example = "HIGH")
+        public Priority priority;
+
+        @AutoAiField(description = "支付方式", required = false, example = "BANK_TRANSFER")
+        public PaymentMethod paymentMethod;
+
+        @AutoAiField(description = "配送地址", required = false)
+        public Address deliveryAddress;
+
+        @AutoAiField(description = "申请人员", required = true, example = "张三")
+        public String requestedBy;
+
+        @AutoAiField(description = "审批人员", required = false, example = "李经理")
+        public String approvedBy;
+
+        @AutoAiField(description = "附加费用（费用类型->金额）", required = false)
+        public Map<String, Double> additionalFees;
+
+        @AutoAiField(description = "自定义字段", required = false)
+        public Map<String, Object> customFields;
+
+        @AutoAiField(description = "备注信息", required = false, example = "请在10个工作日内交付")
+        public List<String> notes;
+
+        @AutoAiField(description = "附件URL列表", required = false)
+        public List<String> attachments;
+
+        @AutoAiField(description = "是否加急", required = false, example = "false")
+        public boolean urgent;
+
+        @AutoAiField(description = "预计交付日期", required = false, example = "2024-02-01")
+        public String expectedDeliveryDate;
+    }
+
+    /** 采购订单摘要 */
+    public static class PurchaseOrderSummary {
+        public String orderId;
+        public String supplier;
+        public double totalAmount;
+        public int itemCount;
+        public OrderStatus status;
+        public Priority priority;
+        public PaymentMethod paymentMethod;
+        public String deliveryAddress;
+        public String requestedBy;
+        public String approvedBy;
+        public List<OrderItem> items;
+        public Map<String, Double> additionalFees;
+        public Map<String, Object> customFields;
+        public List<String> notes;
+        public long createdAt;
+    }
+
+    /** 采购订单处理结果 */
+    public static class PurchaseOrderResult {
+        public boolean success;
+        public String message;
+        public PurchaseOrderSummary order;
+
+        public PurchaseOrderResult(boolean success, String message, PurchaseOrderSummary order) {
+            this.success = success;
+            this.message = message;
+            this.order = order;
+        }
+    }
+
+    /** 绩效指标 */
+    public static class PerformanceMetric {
+        @AutoAiField(description = "指标名称", required = true, example = "工作完成率")
+        public String name;
+
+        @AutoAiField(description = "指标得分", required = true, example = "95.0")
+        public double score;
+
+        @AutoAiField(description = "权重", required = true, example = "0.3")
+        public double weight;
+
+        @AutoAiField(description = "目标值", required = false, example = "90.0")
+        public double target;
+
+        @AutoAiField(description = "说明", required = false, example = "按时完成工作任务的比例")
+        public String description;
+    }
+
+    /** 绩效分析请求 */
+    public static class PerformanceAnalysisRequest {
+        @AutoAiField(description = "员工姓名", required = true, example = "张三")
+        public String employeeName;
+
+        @AutoAiField(description = "分析周期", required = false, example = "月度")
+        public String period;
+
+        @AutoAiField(description = "开始日期", required = false, example = "2024-01-01")
+        public String startDate;
+
+        @AutoAiField(description = "结束日期", required = false, example = "2024-01-31")
+        public String endDate;
+
+        @AutoAiField(description = "绩效指标列表", required = true)
+        public List<PerformanceMetric> metrics;
+
+        @AutoAiField(description = "工作目标", required = false)
+        public List<String> goals;
+
+        @AutoAiField(description = "成就和亮点", required = false)
+        public List<String> achievements;
+
+        @AutoAiField(description = "改进建议", required = false)
+        public List<String> recommendations;
+
+        @AutoAiField(description = "自定义属性", required = false)
+        public Map<String, Object> customAttributes;
+    }
+
+    /** 绩效报告 */
+    public static class PerformanceReport {
+        public String employeeName;
+        public String department;
+        public String position;
+        public String period;
+        public String startDate;
+        public String endDate;
+        public double averageScore;
+        public List<PerformanceMetric> metrics;
+        public List<String> goals;
+        public List<String> achievements;
+        public List<String> recommendations;
+        public Map<String, Object> customAttributes;
+        public String analysisDate;
+    }
+
+    /** 绩效分析结果 */
+    public static class PerformanceAnalysisResult {
+        public boolean success;
+        public String message;
+        public PerformanceReport report;
+
+        public PerformanceAnalysisResult(boolean success, String message, PerformanceReport report) {
+            this.success = success;
+            this.message = message;
+            this.report = report;
+        }
+    }
 }

@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -41,7 +42,9 @@ public final class ToolDefinitionBuilder {
         }
         String toolName = tool.name();
         if (toolName == null || toolName.isBlank()) {
-            toolName = bean.getClass().getSimpleName() + "." + method.getName();
+            // 使用 AopProxyUtils 获取目标类，避免 CGLIB 代理类名问题
+            Class<?> targetClass = AopProxyUtils.ultimateTargetClass(bean);
+            toolName = targetClass.getSimpleName() + "." + method.getName();
         }
 
         ToolDetail detail = new ToolDetail();
@@ -171,7 +174,9 @@ public final class ToolDefinitionBuilder {
         }
         String toolName = tool.name();
         if (toolName == null || toolName.isBlank()) {
-            toolName = bean.getClass().getSimpleName() + "." + method.getName();
+            // 使用 AopProxyUtils 获取目标类，避免 CGLIB 代理类名问题
+            Class<?> targetClass = AopProxyUtils.ultimateTargetClass(bean);
+            toolName = targetClass.getSimpleName() + "." + method.getName();
         }
 
         ToolDetail detail = new ToolDetail();

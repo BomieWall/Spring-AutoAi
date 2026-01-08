@@ -743,4 +743,15 @@ public final class ExampleGenerator {
 
         return List.of("Example element");
     }
+
+    /**
+     * Generate tool call example in JSON format for new tag-based protocol.
+     * Format: {"name": "ToolName", "arguments": {...}}
+     */
+    public static String buildToolCallExample(String toolName, Map<String, Object> arguments) {
+        Map<String, Object> toolCall = new LinkedHashMap<>();
+        toolCall.put("name", toolName);
+        toolCall.put("arguments", arguments);
+        return toJson(toolCall);
+    }
 }

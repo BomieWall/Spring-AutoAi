@@ -5,7 +5,7 @@ autoai:
     base-path: /auto-ai     # Web service base path
   react:
     language: en            # React language (en/zh_CN/zh_TW/ja/ko/fr/de/es/ru)
-    max-steps: 20           # Maximum execution steps (reduce to avoid long execution)
+    max-steps: 200           # Maximum execution steps (reduce to avoid long execution)
     show-tool-details: false # Whether to show tool execution details, false shows only "Execution result: success/failure"
     # Session expiration configuration
     enable-session-expiration: true  # Whether to enable session expiration cleanup
