@@ -88,7 +88,7 @@ Initiate your first conversation with AI, such as: "Please calculate the sum of 
     <dependency>
         <groupId>io.github.bomiewall</groupId>
         <artifactId>spring-autoai-core</artifactId>
-        <version>0.1.9</version>
+        <version>0.1.10</version>
     </dependency>
 </dependencies>
 ```
